@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SportifyX.Domain\SportifyX.Domain.csproj" />
+    <ProjectReference Include="..\SportifyX.Infrastructure\SportifyX.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
