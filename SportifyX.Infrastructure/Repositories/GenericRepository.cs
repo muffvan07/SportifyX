@@ -31,7 +31,7 @@ namespace SportifyX.Infrastructure.Repositories
             return await _dbSet.Where(predicate).FirstOrDefaultAsync();
         }
 
-        public async Task<T> GetByIdAsync(int id)
+        public async Task<T> GetByIdAsync(Guid id)
         {
             return await _dbSet.FindAsync(id);
         }
@@ -49,7 +49,7 @@ namespace SportifyX.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(Guid id)
         {
             var entity = await _dbSet.FindAsync(id);
             if (entity != null)

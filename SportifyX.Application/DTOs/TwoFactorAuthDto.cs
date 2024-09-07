@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace SportifyX.Application.DTOs
 {
-    public class UserLoginDto
+    public class TwoFactorAuthDto
     {
-        public required string Email { get; set; }
-        public required string Password { get; set; }
+        public Guid UserId { get; set; }
     }
 }

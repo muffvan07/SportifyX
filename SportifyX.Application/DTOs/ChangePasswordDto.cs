@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace SportifyX.Application.DTOs
 {
-    public class UserLoginDto
+    public class ChangePasswordDto
     {
         public required string Email { get; set; }
-        public required string Password { get; set; }
+        public required string CurrentPassword { get; set; }
+        public required string NewPassword { get; set; }
     }
 }

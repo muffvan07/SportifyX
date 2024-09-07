@@ -4,6 +4,7 @@ using SportifyX.Application.Interfaces;
 using SportifyX.Application.Services;
 using SportifyX.CrossCutting.ExceptionHandling;
 using SportifyX.Domain.Interfaces;
+using SportifyX.Domain.Settings;
 using SportifyX.Infrastructure.Data;
 using SportifyX.Infrastructure.Repositories;
 using SportifyX.Infrastructure.Security;
@@ -15,7 +16,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configuration settings for JWT
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), option =>
+{
+    option.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+}));
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
@@ -37,6 +44,7 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
@@ -65,5 +73,9 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.UseSwagger();
+
+app.UseExceptionHandler("/error");
+
+app.UseHsts();
 
 app.Run();

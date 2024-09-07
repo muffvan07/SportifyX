@@ -13,7 +13,7 @@ namespace SportifyX.Application.Services
             return await _productRepository.GetAllAsync();
         }
 
-        public async Task<Product> GetProductByIdAsync(int id)
+        public async Task<Product> GetProductByIdAsync(Guid id)
         {
             return await _productRepository.GetByIdAsync(id);
         }
@@ -28,7 +28,7 @@ namespace SportifyX.Application.Services
             await _productRepository.UpdateAsync(product);
         }
 
-        public async Task DeleteProductAsync(int id)
+        public async Task DeleteProductAsync(Guid id)
         {
             await _productRepository.DeleteAsync(id);
         }

@@ -5,28 +5,28 @@ using SportifyX.Domain.Entities;
 
 namespace SportifyX.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class ProductController(IProductService productService) : ControllerBase
     {
         private readonly IProductService _productService = productService;
 
-        [HttpGet]
+        [HttpGet("get")]
         public async Task<IActionResult> GetAllProducts()
         {
             var products = await _productService.GetAllProductsAsync();
             return Ok(products);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetProductById(int id)
+        [HttpGet("getById/{id}")]
+        public async Task<IActionResult> GetProductById(Guid id)
         {
             var product = await _productService.GetProductByIdAsync(id);
             if (product == null) return NotFound();
             return Ok(product);
         }
 
-        [HttpPost]
+        [HttpPost("add")]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO productDto)
         {
             var product = new Product
@@ -42,7 +42,7 @@ namespace SportifyX.API.Controllers
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductDTO productDto)
         {
             var product = new Product
@@ -59,8 +59,8 @@ namespace SportifyX.API.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteProduct(Guid id)
         {
             await _productService.DeleteProductAsync(id);
             return NoContent();

@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace SportifyX.Application.DTOs
 {
-    public class UserLoginDto
+    public class LogoutDto
     {
-        public required string Email { get; set; }
-        public required string Password { get; set; }
+        public Guid UserId { get; set; }
+        public required string Token { get; set; }
     }
 }

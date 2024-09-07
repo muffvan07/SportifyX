@@ -34,7 +34,7 @@ namespace SportifyX.API.Middleware
                     RequestBody = requestBody,
                     ResponseBody = responseBody,
                     ResponseTime = stopwatch.ElapsedMilliseconds,
-                    Timestamp = DateTime.UtcNow
+                    Timestamp = DateTime.Now
                 };
 
                 _logQueue.Enqueue(apiLog);
