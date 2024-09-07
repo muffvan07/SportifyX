@@ -5,13 +5,18 @@ VisualStudioVersion = 17.11.35222.181
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SportifyX.API", "SportifyX.API\SportifyX.API.csproj", "{B76B6E82-CF84-49F7-8D09-A47439BBE59E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportifyX.Application", "SportifyX.Application\SportifyX.Application.csproj", "{028BCC44-6C9D-4A65-BF97-4CEF01C23A3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SportifyX.Application", "SportifyX.Application\SportifyX.Application.csproj", "{028BCC44-6C9D-4A65-BF97-4CEF01C23A3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportifyX.CrossCutting", "SportifyX.CrossCutting\SportifyX.CrossCutting.csproj", "{CF4C674E-D0D2-4EE9-9761-ED6BAB206F85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SportifyX.CrossCutting", "SportifyX.CrossCutting\SportifyX.CrossCutting.csproj", "{CF4C674E-D0D2-4EE9-9761-ED6BAB206F85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportifyX.Domain", "SportifyX.Domain\SportifyX.Domain.csproj", "{5C120C56-9E65-47E4-BD19-92C6AF2FF471}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SportifyX.Domain", "SportifyX.Domain\SportifyX.Domain.csproj", "{5C120C56-9E65-47E4-BD19-92C6AF2FF471}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportifyX.Infrastructure", "SportifyX.Infrastructure\SportifyX.Infrastructure.csproj", "{A44F7DA1-067B-414B-A394-99F03667BCB8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SportifyX.Infrastructure", "SportifyX.Infrastructure\SportifyX.Infrastructure.csproj", "{A44F7DA1-067B-414B-A394-99F03667BCB8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DatabaseBackup", "DatabaseBackup", "{E5F70D77-83EF-4E55-A65F-FB96361C809E}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\DatabaseBackups\SportifyXDB_Backup = ..\..\DatabaseBackups\SportifyXDB_Backup
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
