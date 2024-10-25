@@ -24,5 +24,6 @@ namespace SportifyX.Domain.Entities
         public bool TwoFactorEnabled { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? LastModifiedDate { get; set; }
+        public List<UserRole>? UserRole { get; set; }
     }
 }

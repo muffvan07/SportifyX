@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SportifyX.Application.DTOs
+namespace SportifyX.Application.DTOs.User
 {
-    public class PasswordRecoveryRequestDto
+    public class TwoFactorAuthDto
     {
-        public required string Email { get; set; }
+        public Guid UserId { get; set; }
     }
 }

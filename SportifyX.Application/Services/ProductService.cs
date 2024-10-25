@@ -30,7 +30,7 @@ namespace SportifyX.Application.Services
 
         public async Task DeleteProductAsync(Guid id)
         {
-            await _productRepository.DeleteAsync(id);
+            await _productRepository.DeleteAsync(x => x.Id.ToString() == "1");
         }
     }
 }

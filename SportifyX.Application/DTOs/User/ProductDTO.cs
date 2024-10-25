@@ -1,4 +1,4 @@
-﻿namespace SportifyX.Application.DTOs
+﻿namespace SportifyX.Application.DTOs.User
 {
     public class ProductDTO
     {

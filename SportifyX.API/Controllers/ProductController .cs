@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SportifyX.Application.DTOs;
+using SportifyX.Application.DTOs.User;
 using SportifyX.Application.Interfaces;
 using SportifyX.Domain.Entities;
 

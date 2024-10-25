@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using SportifyX.Application.Interfaces;
 using SportifyX.Application.Services;
+using SportifyX.Application.Services.Common;
+using SportifyX.Application.Services.Common.Interface;
 using SportifyX.CrossCutting.ExceptionHandling;
 using SportifyX.Domain.Interfaces;
 using SportifyX.Domain.Settings;
@@ -18,11 +22,20 @@ builder.Services.AddControllers();
 
 // Configuration settings for JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), option =>
+builder.Services.AddTransient<ApplicationDbContext>(provider =>
 {
-    option.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
-}));
+    var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+    optionsBuilder.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        option =>
+        {
+            option.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+        });
+
+    return new ApplicationDbContext(optionsBuilder.Options);
+});
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
@@ -44,7 +57,9 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddTransient<IEmailSenderService, EmailSenderService>();
+builder.Services.AddTransient<ISmsSenderService, SmsSenderService>();
 
 var app = builder.Build();
 
@@ -52,15 +67,15 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+
+    app.UseSwaggerUI(c =>
+    {
+        c.DefaultModelsExpandDepth(-1); // Hides models from the Swagger UI
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "SportifyX v1"); // Adds a Swagger endpoint
+    });
 
     app.UseDeveloperExceptionPage();
 }
-
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "SportifyX v1");
-});
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
