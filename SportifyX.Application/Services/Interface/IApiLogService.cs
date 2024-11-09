@@ -1,6 +1,6 @@
 ﻿using SportifyX.Domain.Entities;
 
-namespace SportifyX.Application.Interfaces
+namespace SportifyX.Application.Services.Interface
 {
     public interface IApiLogService
     {

@@ -1,4 +1,4 @@
-﻿using SportifyX.Application.Interfaces;
+﻿using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Entities;
 using SportifyX.Domain.Interfaces;
 

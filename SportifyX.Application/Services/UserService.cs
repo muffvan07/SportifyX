@@ -1,7 +1,7 @@
-﻿using SportifyX.Application.Interfaces;
-using SportifyX.Application.ResponseModels.Common;
+﻿using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
 using SportifyX.Application.Services.Common.Interface;
+using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Entities;
 using SportifyX.Domain.Interfaces;
 
@@ -10,7 +10,7 @@ namespace SportifyX.Application.Services
     /// <summary>
     /// UserService
     /// </summary>
-    /// <seealso cref="SportifyX.Application.Interfaces.IUserService" />
+    /// <seealso cref="Interface.IUserService" />
     public class UserService(
         IGenericRepository<User> userRepository,
         IGenericRepository<UserSession> userSessionRepository,

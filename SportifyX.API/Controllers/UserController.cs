@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SportifyX.Application.DTOs.User;
-using SportifyX.Application.Interfaces;
+using SportifyX.Application.Services.Interface;
 
 namespace SportifyX.API.Controllers
 {
@@ -293,21 +293,14 @@ namespace SportifyX.API.Controllers
         [HttpPost("enable-2fa")]
         public async Task<IActionResult> EnableTwoFactorAuthentication([FromBody] TwoFactorAuthDto dto)
         {
-            try
-            {
-                var response = await _userService.EnableTwoFactorAsync(dto.UserId);
+            var response = await _userService.EnableTwoFactorAsync(dto.UserId);
 
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
-            }
-            catch (Exception ex)
+            if (response.StatusCode == StatusCodes.Status200OK)
             {
-                return BadRequest(new { message = ex.Message });
+                return Ok(response);
             }
+
+            return StatusCode(response.StatusCode, response);
         }
 
         /// <summary>
