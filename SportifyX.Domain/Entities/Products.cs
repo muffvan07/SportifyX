@@ -2,8 +2,8 @@
 {
     public class Products
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid CategoryId { get; set; }
+        public long Id { get; set; }
+        public long CategoryId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
         public string Gender { get; set; } = string.Empty;

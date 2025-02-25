@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using SportifyX.Domain.Entities.BaseModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SportifyX.Domain.Entities
 {
-    public class PasswordRecoveryToken
+    public class PasswordRecoveryToken : BaseObjectModel
     {
         [Key]
-        public Guid Id { get; set; }
-        public Guid UserId { get; set; }
+        public long Id { get; set; }
+        public long UserId { get; set; }
         public required string Token { get; set; }
         public DateTime Expiration { get; set; }
         public bool IsUsed { get; set; }

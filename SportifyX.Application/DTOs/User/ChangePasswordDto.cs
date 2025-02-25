@@ -15,5 +15,9 @@ namespace SportifyX.Application.DTOs.User
         [Required(ErrorMessage = "New Password is required.")]
         [MinLength(6, ErrorMessage = "New Password must be at least 6 characters long.")]
         public required string NewPassword { get; set; }
+
+        [Required(ErrorMessage = "Confirm New Password is required.")]
+        [Compare("NewPassword", ErrorMessage = "New Passwords do not match.")]
+        public required string ConfirmNewPassword { get; set; }
     }
 }

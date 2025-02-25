@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SportifyX.Application.ResponseModels.Common
+﻿namespace SportifyX.Application.ResponseModels.Common
 {
     public class ApiResponse<T>
     {
@@ -26,7 +20,7 @@ namespace SportifyX.Application.ResponseModels.Common
         /// <summary>
         /// Optional error details if the request failed.
         /// </summary>
-        public List<string>? Errors { get; set; }
+        public string? Errors { get; set; }
 
         /// <summary>
         /// The timestamp of when the response is created.
@@ -38,12 +32,12 @@ namespace SportifyX.Application.ResponseModels.Common
             Timestamp = DateTime.UtcNow;
         }
 
-        public ApiResponse(int statusCode, string message, T? data = default, List<string?>? errors = null)
+        public ApiResponse(int statusCode, string message, T? data = default, string? error = null)
         {
             StatusCode = statusCode;
             Message = message;
             Data = data;
-            Errors = errors ?? [];
+            Errors = error;
             Timestamp = DateTime.UtcNow;
         }
 
@@ -52,9 +46,9 @@ namespace SportifyX.Application.ResponseModels.Common
             return new ApiResponse<T>(200, message, data);
         }
 
-        public static ApiResponse<T> Fail(int statusCode, string message, List<string>? errors = null)
+        public static ApiResponse<T> Fail(int statusCode, string message, string? error = null)
         {
-            return new ApiResponse<T>(statusCode, message, default, errors);
+            return new ApiResponse<T>(statusCode, message, default, error);
         }
     }
 }

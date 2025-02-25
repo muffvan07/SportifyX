@@ -39,11 +39,11 @@ namespace SportifyX.Application.Services
         /// <param name="id">The identifier.</param>
         /// <param name="category">The category.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> UpdateCategoryAsync(Guid id, Categories category)
+        public async Task<ApiResponse<bool>> UpdateCategoryAsync(long id, Categories category)
         {
             var existingCategory = await _categoryRepository.GetByIdAsync(id);
             if (existingCategory == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", new List<string> { "Category not found." });
+                return ApiResponse<bool>.Fail(404, "Not Found", "Category not found.");
 
             existingCategory.Name = category.Name;
             existingCategory.Description = category.Description;
@@ -57,10 +57,16 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="id">The identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id)
+        public async Task<ApiResponse<bool>> DeleteCategoryAsync(long id)
         {
             await _categoryRepository.DeleteAsync(x => x.Id == id);
             return ApiResponse<bool>.Success(true);
+        }
+
+        public async Task<ApiResponse<List<Categories>>> GetAllCategoriesAsync()
+        {
+            var categories = await _categoryRepository.GetAllAsync();
+            return ApiResponse<List<Categories>>.Success(categories.ToList());
         }
 
         #endregion

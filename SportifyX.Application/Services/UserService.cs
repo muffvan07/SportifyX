@@ -1,9 +1,12 @@
-﻿using SportifyX.Application.ResponseModels.Common;
+﻿using SportifyX.Application.DTOs.User;
+using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
 using SportifyX.Application.Services.Common.Interface;
 using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Entities;
+using SportifyX.Domain.Helpers;
 using SportifyX.Domain.Interfaces;
+using static SportifyX.Domain.Helpers.Enumerators;
 
 namespace SportifyX.Application.Services
 {
@@ -14,10 +17,9 @@ namespace SportifyX.Application.Services
     public class UserService(
         IGenericRepository<User> userRepository,
         IGenericRepository<UserSession> userSessionRepository,
-        IGenericRepository<Role> roleRepository,
         IGenericRepository<UserRole> userRoleRepository,
         IGenericRepository<PasswordRecoveryToken> passwordRecoveryTokenRepository,
-        IGenericRepository<Verifications> verificationRepository,
+        IGenericRepository<Verification> verificationRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
         IEmailSenderService emailSenderService,
@@ -36,11 +38,6 @@ namespace SportifyX.Application.Services
         private readonly IGenericRepository<UserSession> _userSessionRepository = userSessionRepository;
 
         /// <summary>
-        /// The role repository
-        /// </summary>
-        private readonly IGenericRepository<Role> _roleRepository = roleRepository;
-
-        /// <summary>
         /// The user role repository
         /// </summary>
         private readonly IGenericRepository<UserRole> _userRoleRepository = userRoleRepository;
@@ -53,7 +50,7 @@ namespace SportifyX.Application.Services
         /// <summary>
         /// The verification repository
         /// </summary>
-        private readonly IGenericRepository<Verifications> _verificationRepository = verificationRepository;
+        private readonly IGenericRepository<Verification> _verificationRepository = verificationRepository;
 
         /// <summary>
         /// The password hasher
@@ -89,7 +86,7 @@ namespace SportifyX.Application.Services
         /// <param name="role">The role.</param>
         /// <returns></returns>
         /// <exception cref="System.Exception">User with this email already exists.</exception>
-        public async Task<ApiResponse<RegisterUserResponseModel>> RegisterUserAsync(string email, string password, string username, string phoneNumber, string role)
+        public async Task<ApiResponse<RegisterUserResponseModel>> RegisterUserAsync(UserRegistrationDto userRegistrationDto)
         {
             const int unauthorizedStatusCode = 401;
             const string unauthorizedMessage = "Unauthorized";
@@ -100,62 +97,71 @@ namespace SportifyX.Application.Services
             try
             {
                 // Check if a user with the same email already exists
-                var existingUser = await _userRepository.GetAsync(x => x.Email == email);
+                var existingUser = await _userRepository.GetAsync(x => x.Email == userRegistrationDto.Email);
 
                 if (existingUser != null)
                 {
-                    return ApiResponse<RegisterUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { userExistsError });
+                    return ApiResponse<RegisterUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, userExistsError);
                 }
 
                 // Hash password
-                var passwordHash = _passwordHasher.HashPassword(password);
+                var passwordHash = _passwordHasher.HashPassword(userRegistrationDto.Password);
 
                 // Create new user
                 var user = new User
                 {
-                    Id = Guid.NewGuid(),
-                    Username = username,
-                    Email = email,
+                    FirstName = userRegistrationDto.FirstName,
+                    LastName = userRegistrationDto.LastName,
+                    Username = userRegistrationDto.Username,
+                    Email = userRegistrationDto.Email,
                     PasswordHash = passwordHash,
                     SecurityStamp = Guid.NewGuid().ToString(),
-                    PhoneNumber = phoneNumber,
+                    PhoneNumber = userRegistrationDto.PhoneNumber,
+                    DOB = userRegistrationDto.DOB,
+                    Gender = userRegistrationDto.Gender,
                     IsPhoneNumberConfirmed = false,
                     IsEmailConfirmed = false,
                     LockoutEnabled = false,
                     AccessFailedCount = 0,
                     TwoFactorEnabled = false,
-                    CreatedDate = DateTime.Now,
-                    LastModifiedDate = null
+                    CreationDate = DateTime.Now,
+                    CreatedBy = userRegistrationDto.Username
                 };
 
                 await _userRepository.AddAsync(user);
 
                 // Check if the role exists
-                var userRole = await _roleRepository.GetAsync(x => x.Name == role);
+                bool isValidRole = Enum.IsDefined(typeof(UserRoleEnum), userRegistrationDto.RoleId);
 
-                if (userRole == null)
+                if (!isValidRole)
                 {
-                    return ApiResponse<RegisterUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { roleNotFoundError });
+                    return ApiResponse<RegisterUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, roleNotFoundError);
                 }
 
-                // Assign role to the user
-                await _userRoleRepository.AddAsync(new UserRole
+                var newUserRole = new UserRole
                 {
                     UserId = user.Id,
-                    RoleId = userRole.Id,
-                    Role = null,
+                    RoleId = userRegistrationDto.RoleId,
                     CreationDate = DateTime.Now,
                     CreatedBy = user.Username
-                });
+                };
+
+                // Assign role to the user
+                await _userRoleRepository.AddAsync(newUserRole);
 
                 // Create response model
                 var responseModel = new RegisterUserResponseModel
                 {
-                    UserId = user.Id.ToString(),
+                    UserId = user.Id,
                     Username = user.Username,
                     Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
                     PhoneNumber = user.PhoneNumber,
-                    Role = role
+                    Role = UserRoleHelper.GetRoleName(userRegistrationDto.RoleId),
+                    IsEmailVerified = user.IsEmailConfirmed,
+                    IsPhoneVerified = user.IsPhoneNumberConfirmed,
+                    CreationDate = user.CreationDate
                 };
 
                 // Return success response
@@ -167,7 +173,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex);
 
                 // Return a failure response with a general error message
-                return ApiResponse<RegisterUserResponseModel>.Fail(500, "Internal Server Error", new List<string> { generalError });
+                return ApiResponse<RegisterUserResponseModel>.Fail(500, "Internal Server Error", generalError);
             }
         }
 
@@ -186,19 +192,21 @@ namespace SportifyX.Application.Services
             const string accountLockedError = "Account locked due to multiple failed login attempts. Try again later.";
             const string generalError = "An unexpected error occurred. Please try again later.";
 
+            int tokenExpiryHours = 1;
+
             try
             {
                 var user = await _userRepository.GetAsync(x => x.Email == email);
 
                 if (user == null)
                 {
-                    return ApiResponse<LoginUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { invalidCredentialsError });
+                    return ApiResponse<LoginUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, invalidCredentialsError);
                 }
 
                 // Check if the user is locked out
                 if (user.LockoutEnabled && user.LockoutEndDateUtc > DateTime.Now)
                 {
-                    return ApiResponse<LoginUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { userLockedOutError });
+                    return ApiResponse<LoginUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, userLockedOutError);
                 }
 
                 // Verify password
@@ -206,9 +214,8 @@ namespace SportifyX.Application.Services
                 {
                     // Handle failed login attempt
                     var isLockedOut = await HandleFailedLoginAsync(user.Id);
-                    var errors = isLockedOut
-                        ? new List<string> { accountLockedError }
-                        : new List<string> { invalidCredentialsError };
+
+                    var errors = isLockedOut ? accountLockedError : invalidCredentialsError;
 
                     return ApiResponse<LoginUserResponseModel>.Fail(unauthorizedStatusCode, unauthorizedMessage, errors);
                 }
@@ -216,16 +223,25 @@ namespace SportifyX.Application.Services
                 // Reset access failed count if login is successful
                 await ResetAccessFailedCountAsync(user.Id);
 
+                var activeUserSession = await _userSessionRepository.GetAllAsync(x => x.UserId == user.Id);
+
+                if (activeUserSession.Where(x => x.IsValid).ToList().Count > 0)
+                {
+                    await _userSessionRepository.UpdateByConditionAsync(x => (x.IsValid && x.UserId == user.Id), x => { x.IsValid = false; x.ModificationDate = DateTime.Now; x.ModifiedBy = user.Username; });
+                }
+
                 // Generate JWT token
-                var token = _jwtTokenGenerator.GenerateToken(user);
+                var token = _jwtTokenGenerator.GenerateToken(user, tokenExpiryHours);
 
                 // Create and add a new user session
                 var userSession = new UserSession
                 {
                     UserId = user.Id,
                     Token = token,
-                    Expiration = DateTime.Now.AddHours(2), // Example expiration time
-                    IsValid = true
+                    Expiration = DateTime.Now.AddHours(tokenExpiryHours), // Example expiration time
+                    IsValid = true,
+                    CreationDate = DateTime.Now,
+                    CreatedBy = user.Username
                 };
 
                 await _userSessionRepository.AddAsync(userSession);
@@ -234,7 +250,10 @@ namespace SportifyX.Application.Services
                 var response = new LoginUserResponseModel
                 {
                     Token = token,
-                    UserId = user.Id, // Converting Guid to string
+                    UserId = user.Id, // Converting long to string
+                    UserName = user.Username,
+                    Email = user.Email,
+                    TokenExpiryDate = userSession.Expiration
                 };
 
                 return ApiResponse<LoginUserResponseModel>.Success(response);
@@ -245,7 +264,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex); // Example of logging, replace with actual logging code
 
                 // Return a failure response with a general error message
-                return ApiResponse<LoginUserResponseModel>.Fail(500, "Internal Server Error", new List<string> { generalError });
+                return ApiResponse<LoginUserResponseModel>.Fail(500, "Internal Server Error", generalError);
             }
         }
 
@@ -255,7 +274,7 @@ namespace SportifyX.Application.Services
         /// <param name="userId">The user identifier.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> LogoutAsync(Guid userId, string token)
+        public async Task<ApiResponse<bool>> LogoutAsync(long userId, string token)
         {
             const int unauthorizedStatusCode = 401;
             const string unauthorizedMessage = "Unauthorized";
@@ -268,10 +287,10 @@ namespace SportifyX.Application.Services
 
                 if (session == null)
                 {
-                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { invalidSessionError });
+                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, invalidSessionError);
                 }
 
-                await InvalidateSessionAsync(session.Id);
+                await InvalidateSessionAsync(session);
 
                 return ApiResponse<bool>.Success(true);
             }
@@ -281,7 +300,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex); // Example of logging, replace with actual logging code
 
                 // Return a failure response with a general error message
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { generalError });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", generalError);
             }
         }
 
@@ -303,7 +322,7 @@ namespace SportifyX.Application.Services
                 var user = await _userRepository.GetAsync(x => x.Email == email);
                 if (user == null)
                 {
-                    return ApiResponse<PasswordResetTokenResponseModel>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userNotFoundError });
+                    return ApiResponse<PasswordResetTokenResponseModel>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
 
                 var token = Guid.NewGuid().ToString();
@@ -313,7 +332,9 @@ namespace SportifyX.Application.Services
                 {
                     UserId = user.Id,
                     Token = token,
-                    Expiration = expirationTime // Set expiration time
+                    Expiration = expirationTime, // Set expiration time
+                    CreationDate = DateTime.Now,
+                    CreatedBy = user.Username
                 };
 
                 await _passwordRecoveryTokenRepository.AddAsync(passwordRecoveryToken);
@@ -346,7 +367,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex);
 
                 // Return a failure response with a general error message
-                return ApiResponse<PasswordResetTokenResponseModel>.Fail(generalErrorCode, "Internal Server Error", new List<string> { generalErrorMessage });
+                return ApiResponse<PasswordResetTokenResponseModel>.Fail(generalErrorCode, "Internal Server Error", generalErrorMessage);
             }
         }
 
@@ -373,7 +394,7 @@ namespace SportifyX.Application.Services
 
                 if (user == null)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userNotFoundError });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
 
                 var validTokens = await _passwordRecoveryTokenRepository.GetAllAsync(x => x.UserId == user.Id && x.Token == token && !x.IsUsed);
@@ -382,12 +403,12 @@ namespace SportifyX.Application.Services
 
                 if (tokenModel == null || tokenModel.Expiration < DateTime.Now)
                 {
-                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { invalidOrExpiredTokenError });
+                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, invalidOrExpiredTokenError);
                 }
 
                 user.PasswordHash = _passwordHasher.HashPassword(newPassword);
                 user.SecurityStamp = Guid.NewGuid().ToString(); // Update security stamp
-                user.LastModifiedDate = DateTime.Now;
+                user.ModificationDate = DateTime.Now;
 
                 await _userRepository.UpdateAsync(user);
 
@@ -402,7 +423,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex); // Example of logging, replace with actual logging code
 
                 // Return a failure response with a general error message
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { generalError });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", generalError);
             }
         }
 
@@ -431,25 +452,25 @@ namespace SportifyX.Application.Services
 
                 if (user == null)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userNotFoundError });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
 
                 // Verify the current password
                 if (!_passwordHasher.VerifyPassword(user.PasswordHash, currentPassword))
                 {
-                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { currentPasswordError });
+                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, currentPasswordError);
                 }
 
                 // Check if the new password is different from the current password
                 if (_passwordHasher.VerifyPassword(user.PasswordHash, newPassword))
                 {
-                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, new List<string> { samePasswordError });
+                    return ApiResponse<bool>.Fail(unauthorizedStatusCode, unauthorizedMessage, samePasswordError);
                 }
 
                 // Update password and security stamp
                 user.PasswordHash = _passwordHasher.HashPassword(newPassword);
                 user.SecurityStamp = Guid.NewGuid().ToString();  // Update security stamp
-                user.LastModifiedDate = DateTime.Now;
+                user.ModificationDate = DateTime.Now;
 
                 await _userRepository.UpdateAsync(user);
 
@@ -461,7 +482,7 @@ namespace SportifyX.Application.Services
                 // LogError(ex);
 
                 // Return a failure response with a general error message
-                return ApiResponse<bool>.Fail(generalErrorCode, "Internal Server Error", new List<string> { generalErrorMessage });
+                return ApiResponse<bool>.Fail(generalErrorCode, "Internal Server Error", generalErrorMessage);
             }
         }
 
@@ -472,7 +493,7 @@ namespace SportifyX.Application.Services
         /// <param name="roleName">Name of the role.</param>
         /// <param name="currentUserId">The current user identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<AddRoleResponseModel>> AddRoleToUserAsync(Guid userId, string roleName, Guid currentUserId)
+        public async Task<ApiResponse<AddRoleResponseModel>> AddRoleToUserAsync(long userId, long roleId, long currentUserId)
         {
             const int notFoundStatusCode = 404;
             const string notFoundMessage = "Not Found";
@@ -488,13 +509,13 @@ namespace SportifyX.Application.Services
             try
             {
                 // Check if the current user is an admin
-                var currentUserRoles = await _userRoleRepository.GetAllByConditionAsync(x => x.UserId == currentUserId, x => x.Role);
+                var currentUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == currentUserId);
 
-                var isAdmin = currentUserRoles.Any(r => r.Role.Name == "Admin"); // Assuming "Admin" is the role name
+                var isAdmin = currentUserRoles.Any(r => r.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode()); // Assuming "Admin" is the role name
 
                 if (!isAdmin)
                 {
-                    return ApiResponse<AddRoleResponseModel>.Fail(forbiddenStatusCode, forbiddenMessage, new List<string> { notAdminError });
+                    return ApiResponse<AddRoleResponseModel>.Fail(forbiddenStatusCode, forbiddenMessage, notAdminError);
                 }
 
                 // Fetch the user to which the role will be added
@@ -502,31 +523,30 @@ namespace SportifyX.Application.Services
 
                 if (user == null)
                 {
-                    return ApiResponse<AddRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userNotFoundError });
+                    return ApiResponse<AddRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
 
                 // Fetch the role by name
-                var role = await _roleRepository.GetAsync(x => x.Name == roleName);
+                bool isValidRole = Enum.IsDefined(typeof(UserRoleEnum), roleId);
 
-                if (role == null)
+                if (!isValidRole)
                 {
-                    return ApiResponse<AddRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { roleNotFoundError });
+                    return ApiResponse<AddRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, roleNotFoundError);
                 }
 
                 // Check if the user already has the role
-                var existingUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == userId && x.RoleId == role.Id);
+                var existingUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == userId && x.RoleId == roleId);
 
                 if (existingUserRoles.Any())
                 {
-                    return ApiResponse<AddRoleResponseModel>.Fail(409, "Conflict", new List<string> { roleExistsError });
+                    return ApiResponse<AddRoleResponseModel>.Fail(409, "Conflict", roleExistsError);
                 }
 
                 // Add the role to the user
                 var userRole = new UserRole
                 {
                     UserId = user.Id,
-                    RoleId = role.Id,
-                    Role = null,  // Role entity is optional
+                    RoleId = roleId,
                     CreationDate = DateTime.Now,
                     CreatedBy = user.Username
                 };
@@ -538,7 +558,7 @@ namespace SportifyX.Application.Services
                 {
                     UserId = user.Id,
                     Username = user.Username,
-                    RoleName = role.Name,
+                    RoleName = UserRoleHelper.GetRoleName(roleId),
                     RoleAssignedDate = DateTime.Now
                 };
 
@@ -549,7 +569,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (implement your logging mechanism here)
                 // LogError(ex);
 
-                return ApiResponse<AddRoleResponseModel>.Fail(generalErrorCode, "Internal Server Error", new List<string> { generalErrorMessage });
+                return ApiResponse<AddRoleResponseModel>.Fail(generalErrorCode, "Internal Server Error", generalErrorMessage);
             }
         }
 
@@ -560,7 +580,7 @@ namespace SportifyX.Application.Services
         /// <param name="roleName">Name of the role.</param>
         /// <param name="currentUserId">The current user identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> RemoveRoleFromUserAsync(Guid userId, string roleName, Guid currentUserId)
+        public async Task<ApiResponse<bool>> RemoveRoleFromUserAsync(long userId, long roleId, long currentUserId)
         {
             const int notFoundStatusCode = 404;
             const string notFoundMessage = "Not Found";
@@ -572,50 +592,42 @@ namespace SportifyX.Application.Services
 
             try
             {
-                // Fetch user and role in parallel for performance
-                var userTask = _userRepository.GetByIdAsync(userId);
-                var roleTask = _roleRepository.GetAsync(x => x.Name == roleName);
-                var currentUserRoleTask = _userRoleRepository.GetAsync(ur => ur.UserId == currentUserId);
+                var user = await _userRepository.GetByIdAsync(userId);
 
-                await Task.WhenAll(userTask, roleTask, currentUserRoleTask);
-
-                var user = await userTask;
-                var role = await roleTask;
-                var currentUserRole = await currentUserRoleTask;
+                var currentUserRole = await _userRoleRepository.GetAsync(ur => ur.UserId == currentUserId);
 
                 // Validate user existence
                 if (user == null)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userNotFoundError });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
+
+                bool isValidRole = Enum.IsDefined(typeof(UserRoleEnum), roleId);
 
                 // Validate role existence
-                if (role == null)
+                if (!isValidRole)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { roleNotFoundError });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, roleNotFoundError);
                 }
 
-                // Fetch the Admin role directly
-                var adminRole = await _roleRepository.GetAsync(x => x.Name == "Admin");
-                var adminUserId = adminRole?.Id; // Safely access Id
-
                 // Validate if the current user is an admin
-                if (currentUserRole == null || currentUserRole.RoleId != adminUserId)
+                if (currentUserRole == null || currentUserRole.RoleId != Enumerators.UserRoleEnum.Admin.GetHashCode())
                 {
-                    return ApiResponse<bool>.Fail(403, "Forbidden", new List<string> { unauthorizedError });
+                    return ApiResponse<bool>.Fail(403, "Forbidden", unauthorizedError);
                 }
 
                 // Check if the admin is trying to remove their own role
-                if (userId == currentUserId && currentUserRole.RoleId == role.Id)
+                if (userId == currentUserId && currentUserRole.RoleId == roleId)
                 {
-                    return ApiResponse<bool>.Fail(403, "Forbidden", new List<string> { adminCannotRemoveOwnRoleError });
+                    return ApiResponse<bool>.Fail(403, "Forbidden", adminCannotRemoveOwnRoleError);
                 }
 
                 // Validate the user's role
-                var userRole = await _userRoleRepository.GetAsync(ur => ur.UserId == userId && ur.RoleId == role.Id);
+                var userRole = await _userRoleRepository.GetAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+
                 if (userRole == null)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { userRoleNotFoundError });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userRoleNotFoundError);
                 }
 
                 // Remove the role from the user
@@ -628,7 +640,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -637,7 +649,7 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="userId">The user identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<UserRoleResponseModel>> GetUserRolesAsync(Guid userId)
+        public async Task<ApiResponse<UserRoleResponseModel>> GetUserRolesAsync(long userId)
         {
             try
             {
@@ -645,27 +657,58 @@ namespace SportifyX.Application.Services
                 const string notFoundMessage = "Not found";
 
                 // Fetch user roles
-                var userRoles = await _userRoleRepository.GetAllByConditionAsync(x => x.UserId == userId, x => x.Role);
+                var userRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == userId);
 
                 if (userRoles == null || !userRoles.Any())
                 {
-                    return ApiResponse<UserRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, new List<string> { "No roles found for the user." });
+                    return ApiResponse<UserRoleResponseModel>.Fail(notFoundStatusCode, notFoundMessage, "No roles found for the user.");
                 }
 
-                var response = new UserRoleResponseModel
+                var userRoleResponse = new UserRoleResponseModel
                 {
                     UserId = userId,
-                    UserRoles = userRoles
                 };
 
-                return ApiResponse<UserRoleResponseModel>.Success(response);
+                // Populate UserRoles list dynamically based on roleIds from your enum
+                foreach (var roleId in userRoles.Select(x => x.RoleId).ToArray())
+                {
+                    // Convert roleId to UserRoleEnum
+                    if (Enum.IsDefined(typeof(UserRoleEnum), roleId))
+                    {
+                        var roleEnum = (UserRoleEnum)roleId;
+                        var roleName = Enum.GetName(typeof(UserRoleEnum), roleEnum);
+
+                        // Check if the role is active using the RoleStatus dictionary
+                        var isActive = UserRoleHelper.IsRoleActive(roleEnum);
+
+                        // Add the role to the response model
+                        userRoleResponse.UserRoles.Add(new UserRoleItem
+                        {
+                            RoleId = roleId,
+                            RoleName = roleName ?? "Unknown",
+                            IsActive = isActive,
+                        });
+                    }
+                    else
+                    {
+                        // Handle case where roleId is not valid in the enum
+                        userRoleResponse.UserRoles.Add(new UserRoleItem
+                        {
+                            RoleId = roleId,
+                            RoleName = "Invalid Role",
+                            IsActive = false,
+                        });
+                    }
+                }
+
+                return ApiResponse<UserRoleResponseModel>.Success(userRoleResponse);
             }
             catch (Exception ex)
             {
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<UserRoleResponseModel>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<UserRoleResponseModel>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -675,26 +718,37 @@ namespace SportifyX.Application.Services
         /// <param name="userId">The user identifier.</param>
         /// <param name="email">The email.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> InitiateEmailVerificationAsync(Guid userId, string email)
+        public async Task<ApiResponse<bool>> InitiateEmailVerificationAsync(long userId)
         {
+            const int notFoundStatusCode = 404;
+            const string notFoundMessage = "Not Found";
+            const string userNotFoundError = "User not found.";
+
             try
             {
+                var user = await _userRepository.GetByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
+                }
+
                 // Generate a new token
                 var token = Guid.NewGuid();
                 var expiration = DateTime.Now.AddHours(1);
 
                 // Insert a new record into the Verifications table
-                var verification = new Verifications
+                var verification = new Verification
                 {
-                    VerificationId = Guid.NewGuid(),
-                    UserId = userId,
-                    Email = email,
-                    VerificationType = "Email",
+                    UserId = user.Id,
+                    Email = user.Email,
+                    VerificationType = Enumerators.VerficationTypeEnum.Email.GetHashCode(),
                     Token = token.ToString(),
                     ExpirationDate = expiration,
                     IsUsed = false,
-                    Status = "Pending",
-                    CreatedDate = DateTime.Now
+                    Status = Enumerators.VerficationStatusEnum.Pending.GetHashCode(),
+                    CreationDate = DateTime.Now,
+                    CreatedBy = user.Username
                 };
 
                 await _verificationRepository.AddAsync(verification);
@@ -710,7 +764,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -721,34 +775,40 @@ namespace SportifyX.Application.Services
         /// <param name="email">The email.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(Guid userId, string email, Guid token)
+        public async Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(long userId, string email, string token)
         {
+            const int notFoundStatusCode = 404;
+            const string notFoundMessage = "Not Found";
+            const string userNotFoundError = "User not found.";
+
             try
             {
                 var user = await _userRepository.GetByIdAsync(userId);
 
                 if (user == null)
                 {
-                    return ApiResponse<bool>.Fail(404, "User not found");
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
                 }
 
                 // Retrieve verification record
-                var verification = await _verificationRepository.GetAsync(v => v.UserId == userId && v.Email == email && v.Token == token.ToString() && v.VerificationType == "Email" && !v.IsUsed);
+                var verification = await _verificationRepository.GetAsync(v => v.UserId == userId && v.Email == email && v.Token == token && v.VerificationType == Enumerators.VerficationTypeEnum.Email.GetHashCode() && !v.IsUsed);
 
                 if (verification == null || verification.ExpirationDate < DateTime.Now)
                 {
                     return ApiResponse<bool>.Fail(404, "Invalid or expired token");
                 }
-                
+
                 // Update verification record
                 verification.IsUsed = true;
-                verification.Status = "Completed";
-                verification.LastModifiedDate = DateTime.Now;
+                verification.Status = Enumerators.VerficationStatusEnum.Completed.GetHashCode();
+                verification.ModificationDate = DateTime.Now;
+                verification.ModifiedBy = user.Username;
 
                 await _verificationRepository.UpdateAsync(verification);
 
                 user.IsEmailConfirmed = true;
-                user.LastModifiedDate = DateTime.Now;
+                user.ModificationDate = DateTime.Now;
+                user.ModifiedBy = user.Username;
 
                 await _userRepository.UpdateAsync(user);
 
@@ -759,7 +819,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -770,25 +830,36 @@ namespace SportifyX.Application.Services
         /// <param name="countryCode">The country code.</param>
         /// <param name="mobileNumber">The mobile number.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> SendMobileVerificationCodeAsync(Guid userId, string countryCode, string mobileNumber)
+        public async Task<ApiResponse<bool>> SendMobileVerificationCodeAsync(long userId, string countryCode, string mobileNumber)
         {
+            const int notFoundStatusCode = 404;
+            const string notFoundMessage = "Not Found";
+            const string userNotFoundError = "User not found.";
+
             try
             {
+                var user = await _userRepository.GetByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, notFoundMessage, userNotFoundError);
+                }
+
                 // Generate a 6-digit random verification code
                 var verificationCode = new Random().Next(100000, 999999).ToString();
 
                 // Save verification data
-                var verificationEntry = new Verifications
+                var verificationEntry = new Verification
                 {
-                    VerificationId = Guid.NewGuid(),
                     UserId = userId,
                     PhoneNumber = string.Concat(countryCode, mobileNumber),
                     Token = verificationCode,
-                    VerificationType = "Mobile",
-                    CreatedDate = DateTime.Now,
+                    VerificationType = Enumerators.VerficationTypeEnum.Phone.GetHashCode(),
                     ExpirationDate = DateTime.Now.AddMinutes(10),
                     IsUsed = false,
-                    Status = "Pending",
+                    Status = Enumerators.VerficationStatusEnum.Pending.GetHashCode(),
+                    CreationDate = DateTime.Now,
+                    CreatedBy = user.Username
                 };
 
                 await _verificationRepository.AddAsync(verificationEntry);
@@ -808,7 +879,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -820,7 +891,7 @@ namespace SportifyX.Application.Services
         /// <param name="mobileNumber">The mobile number.</param>
         /// <param name="verificationCode">The verification code.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> ConfirmMobileVerificationCodeAsync(Guid userId, string countryCode, string mobileNumber, string verificationCode)
+        public async Task<ApiResponse<bool>> ConfirmMobileVerificationCodeAsync(long userId, string countryCode, string mobileNumber, string verificationCode)
         {
             try
             {
@@ -841,13 +912,15 @@ namespace SportifyX.Application.Services
 
                 // Mark the code as used and update
                 verification.IsUsed = true;
-                verification.Status = "Completed";
-                verification.LastModifiedDate = DateTime.Now;
+                verification.Status = Enumerators.VerficationStatusEnum.Completed.GetHashCode();
+                verification.ModificationDate = DateTime.Now;
+                verification.ModifiedBy = user.Username;
 
                 await _verificationRepository.UpdateAsync(verification);
 
                 user.IsPhoneNumberConfirmed = true;
-                user.LastModifiedDate = DateTime.Now;
+                user.ModificationDate = DateTime.Now;
+                user.ModifiedBy = user.Username;
 
                 await _userRepository.UpdateAsync(user);
 
@@ -858,7 +931,7 @@ namespace SportifyX.Application.Services
                 // Log the exception (you can implement logging here)
                 // LogError(ex);
 
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -867,7 +940,7 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="userId">The user identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> EnableTwoFactorAsync(Guid userId)
+        public async Task<ApiResponse<bool>> EnableTwoFactorAsync(long userId)
         {
             const int notFoundStatusCode = 404;
             const string userNotFoundMessage = "User not found.";
@@ -879,11 +952,11 @@ namespace SportifyX.Application.Services
 
                 if (user == null)
                 {
-                    return ApiResponse<bool>.Fail(notFoundStatusCode, "Not Found", new List<string> { userNotFoundMessage });
+                    return ApiResponse<bool>.Fail(notFoundStatusCode, "Not Found", userNotFoundMessage);
                 }
 
                 user.TwoFactorEnabled = true;
-                user.LastModifiedDate = DateTime.Now;
+                user.ModificationDate = DateTime.Now;
 
                 await _userRepository.UpdateAsync(user);
 
@@ -891,7 +964,7 @@ namespace SportifyX.Application.Services
             }
             catch (Exception ex)
             {
-                return ApiResponse<bool>.Fail(500, "Internal Server Error", new List<string> { ex.Message });
+                return ApiResponse<bool>.Fail(500, "Internal Server Error", ex.Message);
             }
         }
 
@@ -899,13 +972,58 @@ namespace SportifyX.Application.Services
         /// Gets the logged in users asynchronous.
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<User>> GetLoggedInUsersAsync()
+        public async Task<ApiResponse<List<LoggedInUsersResponseModel>>> GetLoggedInUsersAsync(long adminUserId)
         {
+            const int notFoundStatusCode = 404;
+            const string userNotFoundMessage = "User not found.";
+            const string notAnAdminErrorMessage = "User Not a Admin. Only Admin Users can fetch Session details.";
+            const string noLoggedInUserMessage = "No Users are currently Logged In.";
+
+            if (adminUserId == 0)
+            {
+                return ApiResponse<List<LoggedInUsersResponseModel>>.Fail(notFoundStatusCode, "Not Found", userNotFoundMessage);
+            }
+
+            var getUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == adminUserId);
+
+            if (getUserRoles.Where(x => x.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode()).ToList().Count == 0)
+            {
+                return ApiResponse<List<LoggedInUsersResponseModel>>.Fail(notFoundStatusCode, "Not Found", notAnAdminErrorMessage);
+            }
+
             var activeSessions = await _userSessionRepository.GetAllAsync(s => s.IsValid && s.Expiration > DateTime.Now);
+
             var userIds = activeSessions.Select(s => s.UserId).Distinct().ToList();
+
             var users = await _userRepository.GetAllAsync(u => userIds.Contains(u.Id));
 
-            return users;
+            if (users.ToList().Count == 0)
+            {
+                return ApiResponse<List<LoggedInUsersResponseModel>>.Fail(notFoundStatusCode, "Not Found", noLoggedInUserMessage);
+            }
+
+            var userRoles = await _userRoleRepository.GetAllAsync(u => userIds.Contains(u.UserId));
+
+            var allUsers = users.Select(u => new LoggedInUsersResponseModel
+            {
+                Id = u.Id,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                Email = u.Email,
+                Username = u.Username,
+                PhoneNumber = u.PhoneNumber,
+                IsEmailConfirmed = u.IsEmailConfirmed,
+                IsPhoneNumberConfirmed = u.IsPhoneNumberConfirmed,
+                DOB = u.DOB,
+                Gender = u.Gender,
+                TwoFactorEnabled = u.TwoFactorEnabled,
+                SessionExipry = activeSessions.FirstOrDefault(x => x.UserId == u.Id && x.IsValid)?.Expiration,
+                UserRoles = string.Join(", ", userRoles
+                            .Where(ur => ur.UserId == u.Id)
+                            .Select(ur => UserRoleHelper.GetRoleName(ur.RoleId)))
+            }).ToList();
+
+            return ApiResponse<List<LoggedInUsersResponseModel>>.Success(allUsers);
         }
 
         /// <summary>
@@ -914,34 +1032,43 @@ namespace SportifyX.Application.Services
         /// <param name="email">The email.</param>
         /// <param name="password">The password.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> UnlockUserAsync(string email, string password)
+        public async Task<ApiResponse<bool>> UnlockUserAsync(string email, long adminUserId)
         {
+            var adminUser = await _userRepository.GetAsync(x => x.Id == adminUserId && !x.LockoutEnabled);
+
+            // Check if the user exists
+            if (adminUser == null)
+            {
+                return ApiResponse<bool>.Fail(401, "Unauthorized", "Admin user does not exist.");
+            }
+
+            var adminUserRole = await _userRoleRepository.GetAsync(x => x.UserId == adminUserId && x.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode());
+
+            if (adminUserRole == null)
+            {
+                return ApiResponse<bool>.Fail(401, "Unauthorized", "Not an Admin User");
+            }
+
             var user = await _userRepository.GetAsync(x => x.Email == email);
 
             // Check if the user exists
             if (user == null)
             {
-                var errors = new List<string> { "User not found" };
-                return ApiResponse<bool>.Fail(401, "Unauthorized", errors);
-            }
-
-            // Validate the provided password against the hashed password
-            if (!_passwordHasher.VerifyPassword(user.PasswordHash, password)) // Compare hashed password
-            {
-                var errors = new List<string> { "Invalid password" };
-                return ApiResponse<bool>.Fail(401, "Unauthorized", errors);
+                return ApiResponse<bool>.Fail(401, "Unauthorized", "User not found.");
             }
 
             // Check if the user is locked out
             if (!user.LockoutEnabled)
             {
-                return ApiResponse<bool>.Fail(400, "Bad Request", new List<string> { "User is not locked out" });
+                return ApiResponse<bool>.Fail(400, "Bad Request", "User is not locked out.");
             }
 
             // Unlock user by setting LockoutEnd to null
             user.LockoutEnabled = false; // Unlock the user
-            user.LockoutEndDateUtc = null; 
+            user.LockoutEndDateUtc = null;
             user.AccessFailedCount = 0;
+            user.ModificationDate = DateTime.Now;
+            user.ModifiedBy = adminUser.Username;
 
             await _userRepository.UpdateAsync(user);
 
@@ -958,7 +1085,7 @@ namespace SportifyX.Application.Services
         /// <param name="userId">The user identifier.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        private async Task<UserSession?> GetValidSessionAsync(Guid userId, string token)
+        private async Task<UserSession?> GetValidSessionAsync(long userId, string token)
         {
             return await _userSessionRepository.GetAsync(us => us.UserId == userId && us.Token == token && us.IsValid && us.Expiration > DateTime.Now);
         }
@@ -967,16 +1094,29 @@ namespace SportifyX.Application.Services
         /// Invalidates the session asynchronous.
         /// </summary>
         /// <param name="sessionId">The session identifier.</param>
-        private async Task InvalidateSessionAsync(Guid sessionId)
+        private async Task<bool> InvalidateSessionAsync(UserSession userSession)
         {
-            var session = await _userSessionRepository.GetByIdAsync(sessionId);
-
-            if (session != null)
+            if (userSession == null)
             {
-                session.IsValid = false;
-
-                await _userSessionRepository.UpdateAsync(session);
+                return false;
             }
+
+            var user = await _userRepository.GetByIdAsync(userSession.UserId);
+
+            if (user != null)
+            {
+                userSession.IsValid = false;
+                userSession.ModificationDate = DateTime.Now;
+                userSession.ModifiedBy = user.Username;
+
+                await _userSessionRepository.UpdateAsync(userSession);
+            }
+            else
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -985,7 +1125,7 @@ namespace SportifyX.Application.Services
         /// <param name="userId">The user identifier.</param>
         /// <returns></returns>
         /// <exception cref="System.Exception">User not found.</exception>
-        private async Task<bool> HandleFailedLoginAsync(Guid userId)
+        private async Task<bool> HandleFailedLoginAsync(long userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
 
@@ -1013,7 +1153,7 @@ namespace SportifyX.Application.Services
         /// <param name="userId">The user identifier.</param>
         /// <returns></returns>
         /// <exception cref="System.Exception">User not found.</exception>
-        private async Task<bool> ResetAccessFailedCountAsync(Guid userId)
+        private async Task<bool> ResetAccessFailedCountAsync(long userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
 
@@ -1024,7 +1164,7 @@ namespace SportifyX.Application.Services
 
             user.AccessFailedCount = 0;
             user.LockoutEndDateUtc = null;
-            user.LastModifiedDate = DateTime.Now;
+            user.ModificationDate = DateTime.Now;
 
             await _userRepository.UpdateAsync(user);
 
@@ -1037,7 +1177,7 @@ namespace SportifyX.Application.Services
         /// <param name="email">The email.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        private async Task<bool> SendEmailVerificationAsync(string email, Guid token)
+        private async Task<bool> SendEmailVerificationAsync(string email, long token)
         {
             var verificationUrl = $"https://yourapp.com/verify-email?token={token}";
             var subject = "Email Verification";

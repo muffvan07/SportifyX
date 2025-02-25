@@ -17,15 +17,30 @@ namespace SportifyX.API.Controllers
         }
 
         [HttpPut("{id}/update")]
-        public async Task<IActionResult> UpdateProduct(Guid id, Products product)
+        public async Task<IActionResult> UpdateProduct(long id, Products product)
         {
             return Ok(await _productService.UpdateProductAsync(id, product));
         }
 
         [HttpDelete("{id}/delete")]
-        public async Task<IActionResult> DeleteProduct(Guid id)
+        public async Task<IActionResult> DeleteProduct(long id)
         {
             return Ok(await _productService.DeleteProductAsync(id));
+        }
+
+        [HttpGet("get-all")]
+        public async Task<IActionResult> GetAllProducts()
+        {
+            var result = await _productService.GetAllProductsAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetProductById(long id)
+        {
+            var result = await _productService.GetProductByIdAsync(id);
+
+            return Ok(result);
         }
     }
 }

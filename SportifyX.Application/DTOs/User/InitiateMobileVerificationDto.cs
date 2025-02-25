@@ -5,12 +5,12 @@ namespace SportifyX.Application.DTOs.User
     public class InitiateMobileVerificationDto
     {
         [Required]
-        public Guid UserId { get; set; }
+        public long UserId { get; set; }
 
         [Required]
-        public string CountryCode { get; set; }
+        public string CountryCode { get; set; } = string.Empty;
 
         [Required]
-        public string MobileNumber { get; set; }
+        public string MobileNumber { get; set; } = string.Empty;
     }
 }

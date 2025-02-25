@@ -6,7 +6,8 @@ namespace SportifyX.Application.Services.Interface
     public interface ICartService
     {
         Task<ApiResponse<bool>> AddItemToCartAsync(CartItems cartItem);
-        Task<ApiResponse<bool>> UpdateCartItemAsync(Guid id, int quantity);
-        Task<ApiResponse<bool>> RemoveItemFromCartAsync(Guid id);
+        Task<ApiResponse<bool>> UpdateCartItemAsync(long id, int quantity);
+        Task<ApiResponse<bool>> RemoveItemFromCartAsync(long id);
+        Task<ApiResponse<List<CartItems>>> GetCartItemsByUserIdAsync(long userId);
     }
 }

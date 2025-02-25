@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using SportifyX.Domain.Entities.BaseModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SportifyX.Domain.Entities
 {
-    public class Role
+    public class Role : BaseObjectModel
     {
         [Key]
-        public Guid Id { get; set; }
-        public string? Name { get; set; }
-        public string? NormalizedName { get; set; }
-        public DateTime CreatedDate { get; set; }
+        public long Id { get; set; }
+        public long RoleId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string NormalizedName { get; set; } = string.Empty;
+        public List<UserRole> UserRole { get; set; } = null!; // Many-to-Many Link
     }
 }

@@ -1,12 +1,11 @@
-using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using SportifyX.Application.Services;
 using SportifyX.Application.Services.Common;
 using SportifyX.Application.Services.Common.Interface;
 using SportifyX.Application.Services.Interface;
 using SportifyX.CrossCutting.ExceptionHandling;
+using SportifyX.Domain.Helpers;
 using SportifyX.Domain.Interfaces;
 using SportifyX.Domain.Settings;
 using SportifyX.Infrastructure.Data;
@@ -41,6 +40,12 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 var issuer = jwtSettings["Issuer"];
 var audience = jwtSettings["Audience"];
+
+// Configure default JSON DateTime format globally
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonDateTimeConverter());
+});
 
 // Register the JWT token generator
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();

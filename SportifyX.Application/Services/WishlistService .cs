@@ -38,10 +38,16 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="id">The identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> RemoveItemFromWishlistAsync(Guid id)
+        public async Task<ApiResponse<bool>> RemoveItemFromWishlistAsync(long id)
         {
             await _wishlistRepository.DeleteAsync(x => x.Id == id);
             return ApiResponse<bool>.Success(true);
+        }
+
+        public async Task<ApiResponse<List<WishlistItems>>> GetWishlistItemsByUserIdAsync(long userId)
+        {
+            var wishlistItems = await _wishlistRepository.GetAllAsync(wi => wi.UserId == userId);
+            return ApiResponse<List<WishlistItems>>.Success(wishlistItems.ToList());
         }
 
         #endregion

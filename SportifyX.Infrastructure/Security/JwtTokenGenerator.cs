@@ -13,7 +13,7 @@ namespace SportifyX.Infrastructure.Security
     {
         private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
-        public string GenerateToken(User user)
+        public string GenerateToken(User user, int expiryHours)
         {
             var claims = new[]
             {
@@ -27,7 +27,7 @@ namespace SportifyX.Infrastructure.Security
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddHours(1), // Token expiration
+                Expires = DateTime.Now.AddHours(expiryHours), // Token expiration
                 Issuer = _jwtSettings.Issuer,
                 Audience = _jwtSettings.Audience,
                 SigningCredentials = creds

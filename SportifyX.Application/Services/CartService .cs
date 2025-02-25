@@ -39,11 +39,11 @@ namespace SportifyX.Application.Services
         /// <param name="id">The identifier.</param>
         /// <param name="quantity">The quantity.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> UpdateCartItemAsync(Guid id, int quantity)
+        public async Task<ApiResponse<bool>> UpdateCartItemAsync(long id, int quantity)
         {
             var cartItem = await _cartRepository.GetByIdAsync(id);
             if (cartItem == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", new List<string> { "Cart item not found." });
+                return ApiResponse<bool>.Fail(404, "Not Found", "Cart item not found.");
 
             cartItem.Quantity = quantity;
             await _cartRepository.UpdateAsync(cartItem);
@@ -56,10 +56,16 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="id">The identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> RemoveItemFromCartAsync(Guid id)
+        public async Task<ApiResponse<bool>> RemoveItemFromCartAsync(long id)
         {
             await _cartRepository.DeleteAsync(x => x.Id == id);
             return ApiResponse<bool>.Success(true);
+        }
+
+        public async Task<ApiResponse<List<CartItems>>> GetCartItemsByUserIdAsync(long userId)
+        {
+            var cartItems = await _cartRepository.GetAllAsync(ci => ci.UserId == userId);
+            return ApiResponse<List<CartItems>>.Success(cartItems.ToList());
         }
 
         #endregion

@@ -28,7 +28,7 @@ namespace SportifyX.API.Controllers
         public async Task<IActionResult> Register([FromBody] UserRegistrationDto registrationDto)
         {
             // Call the service to register the user
-            var response = await _userService.RegisterUserAsync(registrationDto.Email, registrationDto.Username, registrationDto.Password, registrationDto.PhoneNumber, registrationDto.Role);
+            var response = await _userService.RegisterUserAsync(registrationDto);
 
             if (response.StatusCode == StatusCodes.Status200OK)
             {
@@ -83,16 +83,17 @@ namespace SportifyX.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("active-sessions")]
-        public async Task<IActionResult> GetLoggedInUsers()
+        public async Task<IActionResult> GetLoggedInUsers(long adminUserId)
         {
-            var loggedInUsers = await _userService.GetLoggedInUsersAsync();
+            var response = await _userService.GetLoggedInUsersAsync(adminUserId);
 
-            if (loggedInUsers == null || !loggedInUsers.Any())
+            // Return based on response status
+            if (response.StatusCode == StatusCodes.Status200OK)
             {
-                return NotFound(new { message = "No users are currently logged in." });
+                return Ok(response);
             }
 
-            return Ok(loggedInUsers);
+            return StatusCode(response.StatusCode, response);
         }
 
         /// <summary>
@@ -157,7 +158,7 @@ namespace SportifyX.API.Controllers
         /// <param name="userId">The user identifier.</param>
         /// <returns></returns>
         [HttpGet("roles")]
-        public async Task<IActionResult> GetUserRoles(Guid userId)
+        public async Task<IActionResult> GetUserRoles(long userId)
         {
             try
             {
@@ -185,7 +186,7 @@ namespace SportifyX.API.Controllers
         [HttpPost("roles/add")]
         public async Task<IActionResult> AddUserRole([FromBody] AddRoleDto dto)
         {
-            var response = await _userService.AddRoleToUserAsync(dto.UserId, dto.RoleName, dto.CurrentUserId);
+            var response = await _userService.AddRoleToUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
 
             if (response.StatusCode == StatusCodes.Status200OK)
             {
@@ -203,7 +204,7 @@ namespace SportifyX.API.Controllers
         [HttpPost("roles/remove")]
         public async Task<IActionResult> RemoveUserRole([FromBody] RemoveRoleDto dto)
         {
-            var response = await _userService.RemoveRoleFromUserAsync(dto.UserId, dto.RoleName, dto.CurrentUserId);
+            var response = await _userService.RemoveRoleFromUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
 
             if (response.StatusCode == StatusCodes.Status200OK)
             {
@@ -221,7 +222,7 @@ namespace SportifyX.API.Controllers
         [HttpPost("verify-email/initiate")]
         public async Task<IActionResult> InitiateEmailVerification([FromBody] InitiateEmailVerificationDto request)
         {
-            var response = await _userService.InitiateEmailVerificationAsync(request.UserId, request.Email);
+            var response = await _userService.InitiateEmailVerificationAsync(request.UserId);
 
             if (response.StatusCode == StatusCodes.Status200OK)
             {
@@ -311,7 +312,7 @@ namespace SportifyX.API.Controllers
         [HttpPost("unlock")]
         public async Task<IActionResult> UnlockUser([FromBody] UnlockUserDto unlockUserDto)
         {
-            var response = await _userService.UnlockUserAsync(unlockUserDto.Email, unlockUserDto.Password);
+            var response = await _userService.UnlockUserAsync(unlockUserDto.Email, unlockUserDto.AdminUserId);
 
             if (response.StatusCode == StatusCodes.Status200OK)
             {

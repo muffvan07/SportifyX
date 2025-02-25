@@ -30,10 +30,10 @@ namespace SportifyX.Infrastructure.Repositories
 
         public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).FirstOrDefaultAsync();
+            return await _dbSet.AsNoTracking().Where(predicate).FirstOrDefaultAsync();
         }
 
-        public async Task<T?> GetByIdAsync(Guid id)
+        public async Task<T?> GetByIdAsync(long id)
         {
             return await _dbSet.FindAsync(id);
         }
@@ -72,6 +72,21 @@ namespace SportifyX.Infrastructure.Repositories
         {
             _dbSet.Attach(entity);
             _context.Entry(entity).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateByConditionAsync(Expression<Func<T, bool>> predicate, Action<T> updateAction)
+        {
+            var entities = await _dbSet.Where(predicate).ToListAsync();
+
+            if (!entities.Any()) return; // No matching records found
+
+            foreach (var entity in entities)
+            {
+                updateAction(entity);
+                _context.Entry(entity).State = EntityState.Modified;
+            }
+
             await _context.SaveChangesAsync();
         }
 

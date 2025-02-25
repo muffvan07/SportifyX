@@ -39,11 +39,11 @@ namespace SportifyX.Application.Services
         /// <param name="id">The identifier.</param>
         /// <param name="product">The product.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> UpdateProductAsync(Guid id, Products product)
+        public async Task<ApiResponse<bool>> UpdateProductAsync(long id, Products product)
         {
             var existingProduct = await _productRepository.GetByIdAsync(id);
             if (existingProduct == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", new List<string> { "Product not found." });
+                return ApiResponse<bool>.Fail(404, "Not Found", "Product not found.");
 
             existingProduct.Name = product.Name;
             existingProduct.CategoryId = product.CategoryId;
@@ -63,10 +63,25 @@ namespace SportifyX.Application.Services
         /// </summary>
         /// <param name="id">The identifier.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> DeleteProductAsync(Guid id)
+        public async Task<ApiResponse<bool>> DeleteProductAsync(long id)
         {
             await _productRepository.DeleteAsync(x => x.Id == id);
             return ApiResponse<bool>.Success(true);
+        }
+
+        public async Task<ApiResponse<List<Products>>> GetAllProductsAsync()
+        {
+            var products = await _productRepository.GetAllAsync();
+            return ApiResponse<List<Products>>.Success(products.ToList());
+        }
+
+        public async Task<ApiResponse<Products>> GetProductByIdAsync(long id)
+        {
+            var product = await _productRepository.GetByIdAsync(id);
+            if (product == null)
+                return ApiResponse<Products>.Fail(404, "Not Found", "Product not found.");
+
+            return ApiResponse<Products>.Success(product);
         }
 
         #endregion

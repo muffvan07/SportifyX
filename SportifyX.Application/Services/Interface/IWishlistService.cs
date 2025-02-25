@@ -6,6 +6,7 @@ namespace SportifyX.Application.Services.Interface
     public interface IWishlistService
     {
         Task<ApiResponse<bool>> AddItemToWishlistAsync(WishlistItems wishlistItem);
-        Task<ApiResponse<bool>> RemoveItemFromWishlistAsync(Guid id);
+        Task<ApiResponse<bool>> RemoveItemFromWishlistAsync(long id);
+        Task<ApiResponse<List<WishlistItems>>> GetWishlistItemsByUserIdAsync(long userId);
     }
 }

@@ -12,24 +12,30 @@ namespace SportifyX.Infrastructure.Data
 
         public DbSet<ApiLog> ApiLogs { get; set; }
         public DbSet<User> Users { get; set; }
-        public DbSet<Role> Roles { get; set; }
+        //public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<UserSession> UserSessions { get; set; }
         public DbSet<PasswordRecoveryToken> PasswordRecoveryTokens { get; set; }
-        public DbSet<Verifications> Verifications { get; set; }
+        public DbSet<Verification> Verifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Define composite primary key for UserRole
             modelBuilder.Entity<UserRole>()
-                .HasKey(e => new { e.UserId, e.RoleId });
+                .HasKey(ur => new { ur.Id });
 
+            // Define relationship: User -> UserRole
             modelBuilder.Entity<User>()
-                .HasMany(x => x.UserRole)       // Assuming User has a collection of UserRole
-                .WithOne(y => y.User)            // Each UserRole is associated with one User
-                .HasForeignKey(y => y.UserId);   // Define the foreign key in UserRole for User
+                .HasMany(u => u.UserRole)     // User has many UserRoles
+                .WithOne(ur => ur.User)        // Each UserRole has one User
+                .HasForeignKey(ur => ur.UserId); // Delete UserRoles when User is deleted
 
-            modelBuilder.Entity<UserRole>()
-                .HasOne(x => x.Role);            // Each UserRole is associated with one Role
+            // Define relationship: Role -> UserRole
+            //modelBuilder.Entity<Role>()
+            //    .HasMany(r => r.UserRole)     // Role has many UserRoles
+            //    .WithOne(ur => ur.Role)        // Each UserRole has one Role
+            //    .HasForeignKey(ur => ur.RoleId) // Foreign key in UserRole
+            //    .OnDelete(DeleteBehavior.Restrict); // Prevent role deletion if assigned
 
             base.OnModelCreating(modelBuilder);
         }

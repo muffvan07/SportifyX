@@ -30,15 +30,22 @@ namespace SportifyX.API.Controllers
         }
 
         [HttpPut("{id}/update")]
-        public async Task<IActionResult> UpdateCategory(Guid id, Categories category)
+        public async Task<IActionResult> UpdateCategory(long id, Categories category)
         {
             return Ok(await _categoryService.UpdateCategoryAsync(id, category));
         }
 
         [HttpDelete("{id}/delete")]
-        public async Task<IActionResult> DeleteCategory(Guid id)
+        public async Task<IActionResult> DeleteCategory(long id)
         {
             return Ok(await _categoryService.DeleteCategoryAsync(id));
+        }
+
+        [HttpGet("get-all")]
+        public async Task<IActionResult> GetAllCategories()
+        {
+            var result = await _categoryService.GetAllCategoriesAsync();
+            return Ok(result);
         }
 
         #endregion

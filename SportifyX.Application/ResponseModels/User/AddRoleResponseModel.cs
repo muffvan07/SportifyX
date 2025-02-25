@@ -8,9 +8,9 @@ namespace SportifyX.Application.ResponseModels.User
 {
     public class AddRoleResponseModel
     {
-        public Guid UserId { get; set; }
+        public long UserId { get; set; }
         public string Username { get; set; }
-        public string RoleName { get; set; }
+        public string RoleName { get; set; } = null!;
         public DateTime RoleAssignedDate { get; set; }
     }
 
