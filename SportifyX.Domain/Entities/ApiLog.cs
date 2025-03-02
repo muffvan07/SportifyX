@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SportifyX.Domain.Entities
 {
     public class ApiLog
     {
         [Key]
-        public int Id { get; set; }
+        public long Id { get; set; }
+        public string? RequestPath { get; set; }
         public string? HttpMethod { get; set; }
-        public string? Endpoint { get; set; }
+        public string? RequestHeaders { get; set; }
+        public string? QueryParams { get; set; }
         public string? RequestBody { get; set; }
+        public string? ResponseHeaders { get; set; }
         public string? ResponseBody { get; set; }
-        public long ResponseTime { get; set; } // In milliseconds
-        public string? CreatedBy { get; set; }
-        public DateTime Timestamp { get; set; }
+        public int StatusCode { get; set; }
+        public string? ClientIp { get; set; }
+        public long UserId { get; set; }
+        public long ExecutionTimeMs { get; set; }
+        public DateTime CreationDate { get; set; }
     }
 }

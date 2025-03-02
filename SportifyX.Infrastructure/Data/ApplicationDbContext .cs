@@ -17,6 +17,7 @@ namespace SportifyX.Infrastructure.Data
         public DbSet<UserSession> UserSessions { get; set; }
         public DbSet<PasswordRecoveryToken> PasswordRecoveryTokens { get; set; }
         public DbSet<Verification> Verifications { get; set; }
+        public DbSet<ExceptionLog> ExceptionLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

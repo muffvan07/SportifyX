@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SportifyX.Application\SportifyX.Application.csproj" />
-    <ProjectReference Include="..\SportifyX.CrossCutting\SportifyX.CrossCutting.csproj" />
     <ProjectReference Include="..\SportifyX.Infrastructure\SportifyX.Infrastructure.csproj" />
   </ItemGroup>
 

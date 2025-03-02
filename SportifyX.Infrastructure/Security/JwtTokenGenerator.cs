@@ -27,7 +27,7 @@ namespace SportifyX.Infrastructure.Security
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddHours(expiryHours), // Token expiration
+                Expires = DateTime.UtcNow.AddHours(expiryHours), // Token expiration
                 Issuer = _jwtSettings.Issuer,
                 Audience = _jwtSettings.Audience,
                 SigningCredentials = creds

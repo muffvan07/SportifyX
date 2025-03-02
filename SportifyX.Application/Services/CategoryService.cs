@@ -43,7 +43,7 @@ namespace SportifyX.Application.Services
         {
             var existingCategory = await _categoryRepository.GetByIdAsync(id);
             if (existingCategory == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", "Category not found.");
+                return ApiResponse<bool>.Fail(404, "Category not found.");
 
             existingCategory.Name = category.Name;
             existingCategory.Description = category.Description;

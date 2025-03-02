@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SportifyX.Application\SportifyX.Application.csproj" />
     <ProjectReference Include="..\SportifyX.Domain\SportifyX.Domain.csproj" />
   </ItemGroup>
 

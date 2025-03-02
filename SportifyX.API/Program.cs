@@ -4,11 +4,11 @@ using SportifyX.Application.Services;
 using SportifyX.Application.Services.Common;
 using SportifyX.Application.Services.Common.Interface;
 using SportifyX.Application.Services.Interface;
-using SportifyX.CrossCutting.ExceptionHandling;
 using SportifyX.Domain.Helpers;
 using SportifyX.Domain.Interfaces;
 using SportifyX.Domain.Settings;
 using SportifyX.Infrastructure.Data;
+using SportifyX.Infrastructure.Middleware;
 using SportifyX.Infrastructure.Repositories;
 using SportifyX.Infrastructure.Security;
 using SportifyX.Infrastructure.Services;
@@ -63,8 +63,11 @@ builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddTransient<IEmailSenderService, EmailSenderService>();
+builder.Services.AddScoped<IBrevoEmailService, BrevoEmailService>();
 builder.Services.AddTransient<ISmsSenderService, SmsSenderService>();
+builder.Services.AddScoped<IExceptionHandlingService, ExceptionHandlingService>();
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
@@ -83,6 +86,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<ApiLoggingMiddleware>();
 
 app.UseRouting();
 

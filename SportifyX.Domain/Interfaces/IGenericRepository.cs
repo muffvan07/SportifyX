@@ -20,5 +20,6 @@ namespace SportifyX.Domain.Interfaces
         Task UpdateAsync(T entity);
         Task UpdateByConditionAsync(Expression<Func<T, bool>> predicate, Action<T> updateAction);
         Task DeleteAsync(Expression<Func<T, bool>> predicate);
+        Task<List<T>> GetAllWithOptionsAsync(Expression<Func<T, bool>> predicate = null, Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null, int? skip = null, int? take = null);
     }
 }

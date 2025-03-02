@@ -8,11 +8,6 @@
         public int StatusCode { get; set; }
 
         /// <summary>
-        /// A short message describing the outcome of the request.
-        /// </summary>
-        public string? Message { get; set; }
-
-        /// <summary>
         /// The data returned by the API. It will be null in case of an error.
         /// </summary>
         public T? Data { get; set; }
@@ -32,23 +27,22 @@
             Timestamp = DateTime.UtcNow;
         }
 
-        public ApiResponse(int statusCode, string message, T? data = default, string? error = null)
+        public ApiResponse(int statusCode, T? data = default, string? error = null)
         {
             StatusCode = statusCode;
-            Message = message;
             Data = data;
             Errors = error;
             Timestamp = DateTime.UtcNow;
         }
 
-        public static ApiResponse<T> Success(T data, string message = "Success")
+        public static ApiResponse<T> Success(T data)
         {
-            return new ApiResponse<T>(200, message, data);
+            return new ApiResponse<T>(200, data);
         }
 
-        public static ApiResponse<T> Fail(int statusCode, string message, string? error = null)
+        public static ApiResponse<T> Fail(int statusCode, string? error = null)
         {
-            return new ApiResponse<T>(statusCode, message, default, error);
+            return new ApiResponse<T>(statusCode, default, error);
         }
     }
 }

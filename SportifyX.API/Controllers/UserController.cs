@@ -1,12 +1,18 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SportifyX.Application.DTOs.User;
+using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.Services.Interface;
+using SportifyX.Domain.Helpers;
 
 namespace SportifyX.API.Controllers
 {
+    /// <summary>
+    /// UserController
+    /// </summary>
+    /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
     [ApiController]
     [Route("api/user")]
-    public class UserController(IUserService authService) : ControllerBase
+    public class UserController(IUserService authService, IExceptionHandlingService exceptionHandlingService) : ControllerBase
     {
         #region Variables
 
@@ -15,9 +21,16 @@ namespace SportifyX.API.Controllers
         /// </summary>
         private readonly IUserService _userService = authService;
 
+        /// <summary>
+        /// The exception handling service
+        /// </summary>
+        private readonly IExceptionHandlingService _exceptionHandlingService = exceptionHandlingService;
+
         #endregion
 
         #region Methods
+
+        #region Register User
 
         /// <summary>
         /// Registers the specified registration dto.
@@ -27,18 +40,33 @@ namespace SportifyX.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegistrationDto registrationDto)
         {
-            // Call the service to register the user
-            var response = await _userService.RegisterUserAsync(registrationDto);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                // Return success response with detailed information from service
-                return Ok(response);
-            }
+                // Call the service to register the user
+                var response = await _userService.RegisterUserAsync(registrationDto);
 
-            // Return the appropriate failure response with status code and error details
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    // Return success response with detailed information from service
+                    return Ok(response);
+                }
+
+                // Return the appropriate failure response with status code and error details
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region User Login
 
         /// <summary>
         /// Logins the specified login dto.
@@ -48,16 +76,31 @@ namespace SportifyX.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto loginDto)
         {
-            var response = await _userService.LoginAsync(loginDto.Email, loginDto.Password);
-
-            // Return based on response status
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.LoginAsync(loginDto.Email, loginDto.Password);
 
-            return StatusCode(response.StatusCode, response);
+                // Return based on response status
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region User Logout
 
         /// <summary>
         /// Logouts the specified dto.
@@ -67,16 +110,63 @@ namespace SportifyX.API.Controllers
         [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromBody] LogoutDto dto)
         {
-            var response = await _userService.LogoutAsync(dto.UserId, dto.Token);
-
-            // Return based on response status
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.LogoutAsync(dto.UserId, dto.Token);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Unlock User
+
+        /// <summary>
+        /// Unlocks the user.
+        /// </summary>
+        /// <param name="unlockUserDto">The unlock user dto.</param>
+        /// <returns></returns>
+        [HttpPost("unlock")]
+        public async Task<IActionResult> UnlockUser([FromBody] UnlockUserDto unlockUserDto)
+        {
+            try
+            {
+                var response = await _userService.UnlockUserAsync(unlockUserDto.Email, unlockUserDto.AdminUserId);
+
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
+        #region Get Logged in Users
 
         /// <summary>
         /// Gets the logged in users.
@@ -85,72 +175,97 @@ namespace SportifyX.API.Controllers
         [HttpGet("active-sessions")]
         public async Task<IActionResult> GetLoggedInUsers(long adminUserId)
         {
-            var response = await _userService.GetLoggedInUsersAsync(adminUserId);
-
-            // Return based on response status
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.GetLoggedInUsersAsync(adminUserId);
 
-            return StatusCode(response.StatusCode, response);
+                // Return based on response status
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
+        #endregion
+
+        #region Add User Role
+
         /// <summary>
-        /// Requests the password reset.
+        /// Adds the user role.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpPost("password/request-recovery")]
-        public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordRecoveryRequestDto dto)
+        [HttpPost("roles/add")]
+        public async Task<IActionResult> AddUserRole([FromBody] AddRoleDto dto)
         {
-            var response = await _userService.GeneratePasswordResetTokenAsync(dto.Email);
-
-            // Send token via email (or other means)
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.AddRoleToUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
+        #endregion
+
+        #region Remove User Role
+
         /// <summary>
-        /// Resets the password.
+        /// Removes the user role.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpPost("password/reset")]
-        public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto dto)
+        [HttpPost("roles/remove")]
+        public async Task<IActionResult> RemoveUserRole([FromBody] RemoveRoleDto dto)
         {
-            var response = await _userService.ResetPasswordAsync(dto.Email, dto.Token, dto.NewPassword);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.RemoveRoleFromUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
-        /// <summary>
-        /// Changes the password.
-        /// </summary>
-        /// <param name="dto">The dto.</param>
-        /// <returns></returns>
-        [HttpPost("password/change")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
-        {
-            var response = await _userService.ChangePasswordAsync(dto.Email, dto.CurrentPassword, dto.NewPassword);
+        #endregion
 
-            if (response.StatusCode == StatusCodes.Status200OK)
-            {
-                return Ok(response);
-            }
-
-            return StatusCode(response.StatusCode, response);
-        }
+        #region Get User Roles
 
         /// <summary>
         /// Gets the user roles.
@@ -173,46 +288,118 @@ namespace SportifyX.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
-            }
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
 
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
+        #endregion
+
+        #region Request Password Reset Token
+
         /// <summary>
-        /// Adds the user role.
+        /// Requests the password reset.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpPost("roles/add")]
-        public async Task<IActionResult> AddUserRole([FromBody] AddRoleDto dto)
+        [HttpPost("password/request-recovery")]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordRecoveryRequestDto dto)
         {
-            var response = await _userService.AddRoleToUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.GeneratePasswordResetTokenAsync(dto.Email);
 
-            return StatusCode(response.StatusCode, response);
+                // Send token via email (or other means)
+
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
+        #endregion
+
+        #region Reset User Passoword
+
         /// <summary>
-        /// Removes the user role.
+        /// Resets the password.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpPost("roles/remove")]
-        public async Task<IActionResult> RemoveUserRole([FromBody] RemoveRoleDto dto)
+        [HttpPost("password/reset")]
+        public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto dto)
         {
-            var response = await _userService.RemoveRoleFromUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.ResetPasswordAsync(dto.Email, dto.Token, dto.NewPassword);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Change User Password
+
+        /// <summary>
+        /// Changes the password.
+        /// </summary>
+        /// <param name="dto">The dto.</param>
+        /// <returns></returns>
+        [HttpPost("password/change")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            try
+            {
+                var response = await _userService.ChangePasswordAsync(dto.Email, dto.CurrentPassword, dto.NewPassword);
+
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
+        #region Initiate Email Verification
 
         /// <summary>
         /// Initiates the email verification.
@@ -222,15 +409,30 @@ namespace SportifyX.API.Controllers
         [HttpPost("verify-email/initiate")]
         public async Task<IActionResult> InitiateEmailVerification([FromBody] InitiateEmailVerificationDto request)
         {
-            var response = await _userService.InitiateEmailVerificationAsync(request.UserId);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.InitiateEmailVerificationAsync(request.UserId);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Confirm Email Verification
 
         /// <summary>
         /// Confirms the email verification.
@@ -240,15 +442,30 @@ namespace SportifyX.API.Controllers
         [HttpPost("verify-email/confirm")]
         public async Task<IActionResult> ConfirmEmailVerification([FromBody] ConfirmEmailVerificationDto request)
         {
-            var response = await _userService.ConfirmEmailVerificationAsync(request.UserId, request.Email, request.Token);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.ConfirmEmailVerificationAsync(request.UserId, request.Email, request.Token);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Initiate Mobile Verification
 
         /// <summary>
         /// Initiates the mobile verification.
@@ -258,15 +475,30 @@ namespace SportifyX.API.Controllers
         [HttpPost("verify-mobile/initiate")]
         public async Task<IActionResult> InitiateMobileVerification([FromBody] InitiateMobileVerificationDto request)
         {
-            var response = await _userService.SendMobileVerificationCodeAsync(request.UserId, request.CountryCode, request.MobileNumber);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.SendMobileVerificationCodeAsync(request.UserId, request.CountryCode, request.MobileNumber);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Confirm Mobile Verification
 
         /// <summary>
         /// Confirms the mobile verification.
@@ -276,15 +508,30 @@ namespace SportifyX.API.Controllers
         [HttpPost("verify-mobile/confirm")]
         public async Task<IActionResult> ConfirmMobileVerification([FromBody] ConfirmMobileVerificationDto request)
         {
-            var response = await _userService.ConfirmMobileVerificationCodeAsync(request.UserId, request.CountryCode, request.MobileNumber, request.VerificationCode);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.ConfirmMobileVerificationCodeAsync(request.UserId, request.CountryCode, request.MobileNumber, request.VerificationCode);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
+
+        #endregion
+
+        #region Enable 2-Factor Authentication
 
         /// <summary>
         /// Enables the two factor authentication.
@@ -294,33 +541,28 @@ namespace SportifyX.API.Controllers
         [HttpPost("enable-2fa")]
         public async Task<IActionResult> EnableTwoFactorAuthentication([FromBody] TwoFactorAuthDto dto)
         {
-            var response = await _userService.EnableTwoFactorAsync(dto.UserId);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
+            try
             {
-                return Ok(response);
-            }
+                var response = await _userService.EnableTwoFactorAsync(dto.UserId);
 
-            return StatusCode(response.StatusCode, response);
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
         }
 
-        /// <summary>
-        /// Unlocks the user.
-        /// </summary>
-        /// <param name="unlockUserDto">The unlock user dto.</param>
-        /// <returns></returns>
-        [HttpPost("unlock")]
-        public async Task<IActionResult> UnlockUser([FromBody] UnlockUserDto unlockUserDto)
-        {
-            var response = await _userService.UnlockUserAsync(unlockUserDto.Email, unlockUserDto.AdminUserId);
-
-            if (response.StatusCode == StatusCodes.Status200OK)
-            {
-                return Ok(response);
-            }
-
-            return StatusCode(response.StatusCode, response);
-        }
+        #endregion
 
         #endregion
     }

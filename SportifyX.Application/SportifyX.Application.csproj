@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SportifyX.Domain\SportifyX.Domain.csproj" />
-    <ProjectReference Include="..\SportifyX.Infrastructure\SportifyX.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

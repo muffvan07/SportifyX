@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SportifyX.Domain.Interfaces;
 using SportifyX.Infrastructure.Data;
-using System;
 using System.Linq.Expressions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SportifyX.Infrastructure.Repositories
 {
@@ -99,6 +97,33 @@ namespace SportifyX.Infrastructure.Repositories
                 _dbSet.Remove(entity);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<List<T>> GetAllWithOptionsAsync(Expression<Func<T, bool>> predicate = null, Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null, int? skip = null, int? take = null)
+        {
+            IQueryable<T> query = _dbSet;
+
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
+
+            if (orderBy != null)
+            {
+                query = orderBy(query);
+            }
+
+            if (skip.HasValue)
+            {
+                query = query.Skip(skip.Value);
+            }
+
+            if (take.HasValue)
+            {
+                query = query.Take(take.Value);
+            }
+
+            return await query.ToListAsync();
         }
     }
 }

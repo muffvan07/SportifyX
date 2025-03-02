@@ -1,9 +1,4 @@
-﻿using SportifyX.Domain.Entities;
-using SportifyX.Domain.Helpers;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
-
-namespace SportifyX.Application.ResponseModels.User
+﻿namespace SportifyX.Application.ResponseModels.User
 {
     public class LoggedInUsersResponseModel
     {

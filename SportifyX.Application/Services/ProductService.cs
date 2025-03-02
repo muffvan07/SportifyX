@@ -43,7 +43,7 @@ namespace SportifyX.Application.Services
         {
             var existingProduct = await _productRepository.GetByIdAsync(id);
             if (existingProduct == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", "Product not found.");
+                return ApiResponse<bool>.Fail(404, "Product not found.");
 
             existingProduct.Name = product.Name;
             existingProduct.CategoryId = product.CategoryId;
@@ -79,7 +79,7 @@ namespace SportifyX.Application.Services
         {
             var product = await _productRepository.GetByIdAsync(id);
             if (product == null)
-                return ApiResponse<Products>.Fail(404, "Not Found", "Product not found.");
+                return ApiResponse<Products>.Fail(404, "Product not found.");
 
             return ApiResponse<Products>.Success(product);
         }

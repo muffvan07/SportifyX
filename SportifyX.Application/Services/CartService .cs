@@ -43,7 +43,7 @@ namespace SportifyX.Application.Services
         {
             var cartItem = await _cartRepository.GetByIdAsync(id);
             if (cartItem == null)
-                return ApiResponse<bool>.Fail(404, "Not Found", "Cart item not found.");
+                return ApiResponse<bool>.Fail(404, "Cart item not found.");
 
             cartItem.Quantity = quantity;
             await _cartRepository.UpdateAsync(cartItem);

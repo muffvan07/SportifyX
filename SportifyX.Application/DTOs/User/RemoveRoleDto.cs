@@ -1,5 +1,4 @@
-﻿using SportifyX.Application.DTOs.Attributes;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SportifyX.Application.DTOs.User
 {
