@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
@@ -7,6 +8,7 @@ using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Entities;
 using SportifyX.Domain.Helpers;
 using SportifyX.Domain.Interfaces;
+using SportifyX.Domain.Settings;
 using static SportifyX.Domain.Helpers.Enumerators;
 
 namespace SportifyX.Application.Services
@@ -25,7 +27,7 @@ namespace SportifyX.Application.Services
         IJwtTokenGenerator jwtTokenGenerator,
         IBrevoEmailService emailSenderService,
         ISmsSenderService smsSenderService,
-        IExceptionHandlingService exceptionLoggingService) : IUserService
+        IOptions<EmailSettingsApi> options) : IUserService
     {
         #region Variables
 
@@ -75,9 +77,9 @@ namespace SportifyX.Application.Services
         private readonly ISmsSenderService _smsSenderService = smsSenderService;
 
         /// <summary>
-        /// The exception logging service
+        /// The settings
         /// </summary>
-        private readonly IExceptionHandlingService _exceptionLoggingService = exceptionLoggingService;
+        private readonly EmailSettingsApi _emailSettingsApi = options.Value;
 
         #endregion
 
@@ -759,7 +761,7 @@ namespace SportifyX.Application.Services
             var body = $"Please verify your email by clicking on this link: {verificationUrl}";
 
             var toEmailAndName = new Dictionary<string, string> { { user.FirstName, user.Email } };
-            var ccEmailAndName = new Dictionary<string, string> { { "Mufaddal", "vanwalamufaddal@gmail.com" } };
+            var ccEmailAndName = new Dictionary<string, string> { { _emailSettingsApi.FromName, _emailSettingsApi.FromEmail } };
 
             // Send the email
             bool emailSent = await SendEmail(toEmailAndName, ccEmailAndName, null, subject, body);
@@ -1077,7 +1079,7 @@ namespace SportifyX.Application.Services
         {
             var senderEmailsAndNames = new Dictionary<string, string>
             {
-                { "SportifyX", "vanwalamufaddal@gmail.com" }
+                { _emailSettingsApi.FromName, _emailSettingsApi.FromEmail }
             };
 
             try

@@ -1,5 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using SportifyX.Application.Services.Common.Interface;
+using SportifyX.Domain.Settings;
 using System.Net.Http.Json;
 using static SportifyX.Application.DTOs.Common.BrevoSendEmailDto;
 
@@ -8,10 +10,12 @@ namespace SportifyX.Application.Services.Common
     public class BrevoEmailService : IBrevoEmailService
     {
         private readonly HttpClient _httpClient;
+        private readonly EmailSettingsApi _emailSettingsApi;
 
-        public BrevoEmailService(HttpClient httpClient)
+        public BrevoEmailService(HttpClient httpClient, IOptions<EmailSettingsApi> options)
         {
             _httpClient = httpClient;
+            _emailSettingsApi = options.Value;
         }
 
         public async Task<HttpResponseMessage> SendEmailAsync(
@@ -21,8 +25,8 @@ namespace SportifyX.Application.Services.Common
             Dictionary<string, string>? bccEmailsAndNames, // Key-Value pairs for BCC
             string subject, string htmlContent)
         {
-            string apiUrl = "https://api.brevo.com/v3/smtp/email";
-            string apiKey = "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";
+            string apiUrl = _emailSettingsApi.ApiURL;
+            string apiKey = _emailSettingsApi.ApiKey;
 
             var payload = new EmailPayload
             {

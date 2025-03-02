@@ -21,7 +21,8 @@ builder.Services.AddControllers();
 
 // Configuration settings for JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<EmailSettingsSMTP>(builder.Configuration.GetSection("EmailSettingsSMTP"));
+builder.Services.Configure<EmailSettingsApi>(builder.Configuration.GetSection("EmailSettingsApi"));
 
 builder.Services.AddTransient<ApplicationDbContext>(provider =>
 {
