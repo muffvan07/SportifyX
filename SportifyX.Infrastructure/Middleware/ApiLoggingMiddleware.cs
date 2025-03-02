@@ -30,6 +30,12 @@ namespace SportifyX.Infrastructure.Middleware
 
         #endregion
 
+        #region Public Methods
+
+        /// <summary>
+        /// Invokes the specified context.
+        /// </summary>
+        /// <param name="context">The context.</param>
         public async Task Invoke(HttpContext context)
         {
             try
@@ -82,6 +88,15 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        #endregion
+
+        #region Private Methods
+
+        /// <summary>
+        /// Reads the request body asynchronous.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         private static async Task<string> ReadRequestBodyAsync(HttpContext context)
         {
             try
@@ -98,6 +113,11 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        /// <summary>
+        /// Reads the response body asynchronous.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         private static async Task<string> ReadResponseBodyAsync(HttpContext context)
         {
             try
@@ -114,6 +134,11 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        /// <summary>
+        /// Minifies the json.
+        /// </summary>
+        /// <param name="json">The json.</param>
+        /// <returns></returns>
         private static string MinifyJson(string json)
         {
             if (string.IsNullOrWhiteSpace(json)) return null;
@@ -127,9 +152,16 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        /// <summary>
+        /// Serializes the json.
+        /// </summary>
+        /// <param name="obj">The object.</param>
+        /// <returns></returns>
         private static string SerializeJson(object obj)
         {
             return JsonConvert.SerializeObject(obj, Formatting.None);
         }
+
+        #endregion
     }
 }

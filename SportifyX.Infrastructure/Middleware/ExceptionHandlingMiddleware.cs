@@ -11,10 +11,31 @@ namespace SportifyX.Infrastructure.Middleware
 {
     public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IServiceScopeFactory scopeFactory)
     {
+        #region Variables
+
+        /// <summary>
+        /// The next
+        /// </summary>
         private readonly RequestDelegate _next = next;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
         private readonly ILogger<ExceptionHandlingMiddleware> _logger = logger;
+
+        /// <summary>
+        /// The scope factory
+        /// </summary>
         private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
 
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
+        /// Invokes the specified context.
+        /// </summary>
+        /// <param name="context">The context.</param>
         public async Task Invoke(HttpContext context)
         {
             string requestBody = await ReadRequestBodyAsync(context);
@@ -35,6 +56,15 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        #endregion
+
+        #region Private Methods
+
+        /// <summary>
+        /// Handles the exception asynchronous.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         private static Task HandleExceptionAsync(HttpContext context)
         {
             context.Response.ContentType = "application/json";
@@ -45,6 +75,11 @@ namespace SportifyX.Infrastructure.Middleware
             return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
         }
 
+        /// <summary>
+        /// Reads the request body asynchronous.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         private static async Task<string> ReadRequestBodyAsync(HttpContext context)
         {
             try
@@ -70,6 +105,13 @@ namespace SportifyX.Infrastructure.Middleware
             }
         }
 
+        /// <summary>
+        /// Determines whether [is valid json] [the specified input].
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <returns>
+        ///   <c>true</c> if [is valid json] [the specified input]; otherwise, <c>false</c>.
+        /// </returns>
         private static bool IsValidJson(string input)
         {
             try
@@ -82,5 +124,7 @@ namespace SportifyX.Infrastructure.Middleware
                 return false;
             }
         }
+
+        #endregion
     }
 }
