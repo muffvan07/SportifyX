@@ -1,28 +1,28 @@
-# SportifyX - E-commerce Platform
+# SportifyX API - E-commerce Platform
 
-SportifyX is an advanced e-commerce platform for sportswear and sports equipment, built using .NET 8. This project implements various core functionalities like user authentication, product catalog, shopping cart, wishlist, order management, and more. It follows best practices such as SOLID principles, REST API standards, and clean architecture.
+SportifyX API is the backend of an advanced e-commerce platform designed for sportswear and sports equipment. Built using .NET 8, this API provides all the necessary functionality for managing users, products, cart, orders, and more. It follows best practices such as SOLID principles, REST API standards, and clean architecture.
 
 ## Features
 
 - **User Authentication & Authorization**
   - User registration, login, password recovery, and role-based access control.
-  - Multi-factor authentication (MFA) using OTP.
   - Email and phone number verification.
+  - JWT-based authentication.
+  - Multi-factor authentication (MFA) using OTP.
 
 - **Product Catalog**
-  - Browse products by categories such as sportswear, footwear, and equipment.
+  - Browse products by categories like sportswear, footwear, and equipment.
   - Filter products by category, brand, gender, price, and material.
   - View detailed product information, including images, specs, reviews, and ratings.
   - Check product inventory and stock availability.
-  - Add products to the cart or wishlist.
+  - Add products to cart or wishlist.
 
 - **Shopping Cart & Wishlist**
-  - Manage cart items.
-  - Save favorite products to wishlist for future purchases.
+  - Add, update, and remove products from cart.
+  - Manage favorite products in the wishlist.
 
 - **Order Management**
   - Track and manage orders from cart to checkout.
-  - Payment gateway integration.
 
 - **Admin Dashboard**
   - Manage users, roles, products, orders, and more.
@@ -38,7 +38,7 @@ SportifyX is an advanced e-commerce platform for sportswear and sports equipment
 
 ## Project Structure
 
-1. **SportifyX.API** - Contains the API controllers and routes.
+1. **SportifyX.API** - Contains the API controllers and routes for the application.
 2. **SportifyX.Application** - Implements the business logic and services.
 3. **SportifyX.Domain** - Defines the models and entities.
 4. **SportifyX.Infrastructure** - Contains the repositories and database logic.
@@ -55,5 +55,5 @@ SportifyX is an advanced e-commerce platform for sportswear and sports equipment
 ### Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/sportifyx.git
-cd sportifyx
+git clone https://github.com/yourusername/sportifyx-api.git
+cd sportifyx-api
