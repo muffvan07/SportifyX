@@ -32,6 +32,8 @@
             ["AdminUserNotFoundErrorMessage"] = "Admin User does not exist.",
             ["NotAnAdminErrorMessage"] = "Not an Admin User.",
             ["UserNotLockedOutErrorMessage"] = "User is not locked out.",
+            ["MissingApiKeyErrorMessage"] = "Api Key is Missing.",
+            ["InvalidApiKeyErrorMessage"] = "Api Key is Invalid.",
         };
 
         /// <summary>

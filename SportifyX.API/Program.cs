@@ -1,5 +1,7 @@
+using AspNetCore.Authentication.ApiKey;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using SportifyX.Application.Services;
 using SportifyX.Application.Services.Common;
 using SportifyX.Application.Services.Common.Interface;
@@ -23,6 +25,13 @@ builder.Services.AddControllers();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<EmailSettingsSMTP>(builder.Configuration.GetSection("EmailSettingsSMTP"));
 builder.Services.Configure<EmailSettingsApi>(builder.Configuration.GetSection("EmailSettingsApi"));
+builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = ApiKeyDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = ApiKeyDefaults.AuthenticationScheme;
+});
 
 builder.Services.AddTransient<ApplicationDbContext>(provider =>
 {
@@ -53,7 +62,36 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "SportifyX", Version = "v1" });
+
+    // Define the API key security scheme
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Name = "X-API-KEY",
+        Type = SecuritySchemeType.ApiKey,
+        Description = "Enter Your API Key."
+    });
+
+    // Apply the security requirement globally
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            new string[] { }
+        }
+    });
+});
 
 // Register services and repositories
 builder.Services.AddScoped<IApiLogService, ApiLogService>();
@@ -88,6 +126,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<ApiLoggingMiddleware>();
+app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseRouting();
 
