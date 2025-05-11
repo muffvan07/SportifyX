@@ -1,7 +1,6 @@
 ﻿using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
-using SportifyX.Domain.Entities;
 
 namespace SportifyX.Application.Services.Interface
 {
@@ -22,6 +21,7 @@ namespace SportifyX.Application.Services.Interface
         Task<ApiResponse<bool>> ConfirmMobileVerificationCodeAsync(long userId, string countryCode, string mobileNumber, string verificationCode);
         Task<ApiResponse<bool>> EnableTwoFactorAsync(long userId);
         Task<ApiResponse<List<LoggedInUsersResponseModel>>> GetLoggedInUsersAsync(long adminUserId);
+        Task<ApiResponse<List<RegisteredUserResponseModel>>> GetAllRegisteredUsersAsync(long adminUserId);
         Task<ApiResponse<bool>> UnlockUserAsync(string email, long adminUserId);
     }
 }

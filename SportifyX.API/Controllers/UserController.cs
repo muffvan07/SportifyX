@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
+using SportifyX.Application.ResponseModels.User;
 using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Helpers;
 
@@ -11,7 +12,7 @@ namespace SportifyX.API.Controllers
     /// </summary>
     /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
     [ApiController]
-    [Route("api/user")]
+    [Route("api/[controller]")]
     public class UserController(IUserService authService, IExceptionHandlingService exceptionHandlingService) : ControllerBase
     {
         #region Variables
@@ -81,12 +82,7 @@ namespace SportifyX.API.Controllers
                 var response = await _userService.LoginAsync(loginDto.Email, loginDto.Password);
 
                 // Return based on response status
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {
@@ -133,6 +129,32 @@ namespace SportifyX.API.Controllers
 
         #endregion
 
+        #region All Users
+
+        /// <summary>
+        /// Gets the list of all registered users. Admin access only.
+        /// </summary>
+        /// <param name="adminUserId">The admin user identifier.</param>
+        /// <returns></returns>
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllRegisteredUsers([FromQuery] long adminUserId)
+        {
+            try
+            {
+                var response = await _userService.GetAllRegisteredUsersAsync(adminUserId);
+
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+                var errorResponse = ApiResponse<List<RegisteredUserResponseModel>>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
         #region Unlock User
 
         /// <summary>
@@ -169,7 +191,7 @@ namespace SportifyX.API.Controllers
         #region Get Logged in Users
 
         /// <summary>
-        /// Gets the logged in users.
+        /// Gets the logged-in users.
         /// </summary>
         /// <returns></returns>
         [HttpGet("active-sessions")]
@@ -534,7 +556,7 @@ namespace SportifyX.API.Controllers
         #region Enable 2-Factor Authentication
 
         /// <summary>
-        /// Enables the two factor authentication.
+        /// Enables the two-factor authentication.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>

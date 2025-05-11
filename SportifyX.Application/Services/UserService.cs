@@ -94,9 +94,6 @@ namespace SportifyX.Application.Services
         /// <returns></returns>
         public async Task<ApiResponse<RegisterUserResponseModel>> RegisterUserAsync(UserRegistrationDto userRegistrationDto)
         {
-            var pUserId = "0";
-            var puserName = userRegistrationDto.Username;
-
             // Check if a user with the same email already exists
             var existingUser = await _userRepository.GetAsync(x => x.Email == userRegistrationDto.Email);
 
@@ -133,10 +130,8 @@ namespace SportifyX.Application.Services
 
             await _userRepository.AddAsync(user);
 
-            pUserId = user.Id.ToString();
-
             // Check if the role exists
-            bool isValidRole = Enum.IsDefined(typeof(UserRoleEnum), userRegistrationDto.RoleId);
+            var isValidRole = Enum.IsDefined(typeof(UserRoleEnum), userRegistrationDto.RoleId);
 
             if (!isValidRole)
             {
@@ -185,7 +180,7 @@ namespace SportifyX.Application.Services
         /// <returns></returns>
         public async Task<ApiResponse<LoginUserResponseModel>> LoginAsync(string email, string password)
         {
-            int tokenExpiryHours = 1;
+            const int tokenExpiryHours = 1;
 
             var user = await _userRepository.GetAsync(x => x.Email == email);
 
@@ -279,7 +274,7 @@ namespace SportifyX.Application.Services
         #region Get Logged In Users
 
         /// <summary>
-        /// Gets the logged in users asynchronous.
+        /// Gets the logged-in users asynchronous.
         /// </summary>
         /// <returns></returns>
         public async Task<ApiResponse<List<LoggedInUsersResponseModel>>> GetLoggedInUsersAsync(long adminUserId)
@@ -291,18 +286,19 @@ namespace SportifyX.Application.Services
 
             var getUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == adminUserId);
 
-            if (getUserRoles.Where(x => x.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode()).ToList().Count == 0)
+            if (getUserRoles.Where(x => x.RoleId == UserRoleEnum.Admin.GetHashCode()).ToList().Count == 0)
             {
                 return ApiResponse<List<LoggedInUsersResponseModel>>.Fail(StatusCodes.Status404NotFound, ErrorMessageHelper.GetErrorMessage("NotAdminToFetchSessionErrorMessage"));
             }
 
             var activeSessions = await _userSessionRepository.GetAllAsync(s => s.IsValid && s.Expiration > DateTime.UtcNow);
 
-            var userIds = activeSessions.Select(s => s.UserId).Distinct().ToList();
+            var userSessions = activeSessions.ToList();
+            var userIds = userSessions.Select(s => s.UserId).Distinct().ToList();
 
             var users = await _userRepository.GetAllAsync(u => userIds.Contains(u.Id));
 
-            if (users.ToList().Count == 0)
+            if (users != null && !users.Any())
             {
                 return ApiResponse<List<LoggedInUsersResponseModel>>.Fail(StatusCodes.Status404NotFound, ErrorMessageHelper.GetErrorMessage("NoUsersLoggedInErrorMessage"));
             }
@@ -322,13 +318,72 @@ namespace SportifyX.Application.Services
                 DOB = u.DOB,
                 Gender = u.Gender,
                 TwoFactorEnabled = u.TwoFactorEnabled,
-                SessionExipry = activeSessions.FirstOrDefault(x => x.UserId == u.Id && x.IsValid)?.Expiration,
+                SessionExipry = userSessions.FirstOrDefault(x => x.UserId == u.Id && x.IsValid)?.Expiration,
                 UserRoles = string.Join(", ", userRoles
                             .Where(ur => ur.UserId == u.Id)
                             .Select(ur => UserRoleHelper.GetRoleName(ur.RoleId)))
             }).ToList();
 
             return ApiResponse<List<LoggedInUsersResponseModel>>.Success(allUsers);
+        }
+
+        #endregion
+
+        #region Get All Registered Users
+
+        /// <summary>
+        /// Gets all registered users. Only accessible by Admin.
+        /// </summary>
+        /// <param name="adminUserId">The admin user ID making the request.</param>
+        /// <returns></returns>
+        public async Task<ApiResponse<List<RegisteredUserResponseModel>>> GetAllRegisteredUsersAsync(long adminUserId)
+        {
+            // Check if the requesting user is an admin
+            var userRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == adminUserId);
+            var isAdmin = userRoles.Any(r => r.RoleId == UserRoleEnum.Admin.GetHashCode());
+
+            if (!isAdmin)
+            {
+                return ApiResponse<List<RegisteredUserResponseModel>>.Fail(StatusCodes.Status403Forbidden, ErrorMessageHelper.GetErrorMessage("NotAnAdminErrorMessage"));
+            }
+
+            // Fetch all users and all user-role mappings
+            var users = await _userRepository.GetAllAsync();
+            var allUserRoles = await _userRoleRepository.GetAllAsync();
+
+            // Map users with their roles
+            var result = users.Select(user =>
+            {
+                // Get all role IDs assigned to this user
+                var roleIdsForUser = allUserRoles
+                    .Where(ur => ur.UserId == user.Id)
+                    .Select(ur => ur.RoleId)
+                    .Distinct()
+                    .ToList();
+
+                // Convert role IDs to role names using the enum helper
+                var roleNames = roleIdsForUser
+                    .Select(UserRoleHelper.GetRoleName)
+                    .ToList();
+
+                return new RegisteredUserResponseModel
+                {
+                    UserId = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Username = user.Username,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Dob = user.DOB,
+                    Gender = user.Gender,
+                    CreationDate = user.CreationDate,
+                    IsEmailConfirmed = user.IsEmailConfirmed,
+                    IsPhoneNumberConfirmed = user.IsPhoneNumberConfirmed,
+                    Roles = roleNames
+                };
+            }).ToList();
+
+            return ApiResponse<List<RegisteredUserResponseModel>>.Success(result);
         }
 
         #endregion
@@ -351,7 +406,7 @@ namespace SportifyX.Application.Services
                 return ApiResponse<bool>.Fail(StatusCodes.Status401Unauthorized, ErrorMessageHelper.GetErrorMessage("AdminUserNotFoundErrorMessage"));
             }
 
-            var adminUserRole = await _userRoleRepository.GetAsync(x => x.UserId == adminUserId && x.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode());
+            var adminUserRole = await _userRoleRepository.GetAsync(x => x.UserId == adminUserId && x.RoleId == UserRoleEnum.Admin.GetHashCode());
 
             if (adminUserRole == null)
             {
@@ -399,7 +454,7 @@ namespace SportifyX.Application.Services
         {
             var currentUserRoles = await _userRoleRepository.GetAllAsync(x => x.UserId == currentUserId);
 
-            var isAdmin = currentUserRoles.Any(r => r.RoleId == Enumerators.UserRoleEnum.Admin.GetHashCode()); // Assuming "Admin" is the role name
+            var isAdmin = currentUserRoles.Any(r => r.RoleId == UserRoleEnum.Admin.GetHashCode()); // Assuming "Admin" is the role name
 
             if (!isAdmin)
             {
@@ -485,7 +540,7 @@ namespace SportifyX.Application.Services
             }
 
             // Validate if the current user is an admin
-            if (currentUserRole == null || currentUserRole.RoleId != Enumerators.UserRoleEnum.Admin.GetHashCode())
+            if (currentUserRole == null || currentUserRole.RoleId != UserRoleEnum.Admin.GetHashCode())
             {
                 return ApiResponse<bool>.Fail(StatusCodes.Status403Forbidden, ErrorMessageHelper.GetErrorMessage("AdminCanRemoveRoleErrorMessage"));
             }
@@ -744,11 +799,11 @@ namespace SportifyX.Application.Services
             {
                 UserId = user.Id,
                 Email = user.Email,
-                VerificationType = Enumerators.VerficationTypeEnum.Email.GetHashCode(),
+                VerificationType = VerificationTypeEnum.Email.GetHashCode(),
                 Token = token.ToString(),
                 ExpirationDate = expiration,
                 IsUsed = false,
-                Status = Enumerators.VerficationStatusEnum.Pending.GetHashCode(),
+                Status = VerificationStatusEnum.Pending.GetHashCode(),
                 CreationDate = DateTime.UtcNow,
                 CreatedBy = user.Username
             };
@@ -795,7 +850,7 @@ namespace SportifyX.Application.Services
             }
 
             // Retrieve verification record
-            var verification = await _verificationRepository.GetAsync(v => v.UserId == userId && v.Email == email && v.Token == token && v.VerificationType == Enumerators.VerficationTypeEnum.Email.GetHashCode() && !v.IsUsed);
+            var verification = await _verificationRepository.GetAsync(v => v.UserId == userId && v.Email == email && v.Token == token && v.VerificationType == VerificationTypeEnum.Email.GetHashCode() && !v.IsUsed);
 
             if (verification == null || verification.ExpirationDate < DateTime.UtcNow)
             {
@@ -804,7 +859,7 @@ namespace SportifyX.Application.Services
 
             // Update verification record
             verification.IsUsed = true;
-            verification.Status = Enumerators.VerficationStatusEnum.Completed.GetHashCode();
+            verification.Status = VerificationStatusEnum.Completed.GetHashCode();
             verification.ModificationDate = DateTime.UtcNow;
             verification.ModifiedBy = user.Username;
 
@@ -848,10 +903,10 @@ namespace SportifyX.Application.Services
                 UserId = userId,
                 PhoneNumber = string.Concat(countryCode, mobileNumber),
                 Token = verificationCode,
-                VerificationType = Enumerators.VerficationTypeEnum.Phone.GetHashCode(),
+                VerificationType = VerificationTypeEnum.Phone.GetHashCode(),
                 ExpirationDate = DateTime.UtcNow.AddMinutes(10),
                 IsUsed = false,
-                Status = Enumerators.VerficationStatusEnum.Pending.GetHashCode(),
+                Status = VerificationStatusEnum.Pending.GetHashCode(),
                 CreationDate = DateTime.UtcNow,
                 CreatedBy = user.Username
             };
@@ -900,7 +955,7 @@ namespace SportifyX.Application.Services
 
             // Mark the code as used and update
             verification.IsUsed = true;
-            verification.Status = Enumerators.VerficationStatusEnum.Completed.GetHashCode();
+            verification.Status = VerificationStatusEnum.Completed.GetHashCode();
             verification.ModificationDate = DateTime.UtcNow;
             verification.ModifiedBy = user.Username;
 
@@ -968,10 +1023,11 @@ namespace SportifyX.Application.Services
         /// <summary>
         /// Invalidates the session asynchronous.
         /// </summary>
-        /// <param name="sessionId">The session identifier.</param>
+        /// <param name="userSession">The user session.</param>
+        /// <returns></returns>
         private async Task<bool> InvalidateSessionAsync(UserSession userSession)
         {
-            if (userSession == null)
+            if (userSession.UserId == 0)
             {
                 return false;
             }
@@ -1036,9 +1092,9 @@ namespace SportifyX.Application.Services
         /// <summary>
         /// Resets the access failed count asynchronous.
         /// </summary>
-        /// <param name="userId">The user identifier.</param>
+        /// <param name="user">The user.</param>
         /// <returns></returns>
-        /// <exception cref="System.Exception">User not found.</exception>
+        /// <exception cref="System.Exception"></exception>
         private async Task<bool> ResetAccessFailedCountAsync(User user)
         {
             try
