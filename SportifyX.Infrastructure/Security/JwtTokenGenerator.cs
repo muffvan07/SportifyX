@@ -13,7 +13,7 @@ namespace SportifyX.Infrastructure.Security
     {
         private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
-        public string GenerateToken(User user, int expiryHours)
+        public string GenerateToken(User user, int expiryMinutes)
         {
             var claims = new[]
             {
@@ -22,15 +22,15 @@ namespace SportifyX.Infrastructure.Security
             };
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_jwtSettings.SecretKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(expiryHours), // Token expiration
+                Expires = DateTime.UtcNow.AddMinutes(expiryMinutes), // Token expiration in minutes
                 Issuer = _jwtSettings.Issuer,
                 Audience = _jwtSettings.Audience,
-                SigningCredentials = creds
+                SigningCredentials = cred
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();

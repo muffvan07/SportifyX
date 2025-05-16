@@ -1,6 +1,8 @@
-﻿namespace SportifyX.Domain.Entities
+﻿using SportifyX.Domain.Entities.BaseModel;
+
+namespace SportifyX.Domain.Entities
 {
-    public class CartItems
+    public class CartItems : BaseObjectModel
     {
         public long Id { get; set; }
         public long UserId { get; set; }

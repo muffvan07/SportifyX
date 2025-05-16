@@ -8,7 +8,14 @@ namespace SportifyX.Application.Services
 {
     public class ExceptionHandlingService(ILogger<ExceptionHandlingService> logger, IGenericRepository<ExceptionLog> exceptionLogRepository) : IExceptionHandlingService
     {
+        /// <summary>
+        /// The logger
+        /// </summary>
         private readonly ILogger<ExceptionHandlingService> _logger = logger;
+
+        /// <summary>
+        /// The exception log repository
+        /// </summary>
         private readonly IGenericRepository<ExceptionLog> _exceptionLogRepository = exceptionLogRepository;
 
         public async Task LogExceptionAsync(Exception exception, HttpContext context)

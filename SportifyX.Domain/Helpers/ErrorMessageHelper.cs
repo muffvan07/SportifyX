@@ -25,8 +25,7 @@
             ["AdminCanRemoveRoleErrorMessage"] = "Only admins can remove roles.",
             ["AdminCannotRemoveOwnRoleErrorMessage"] = "Admin cannot remove their own role.",
             ["FailedToSendEmailErrorMessage"] = "Failed to send email.",
-            ["InvalidTokenErrorMessage"] = "Invalid or expired token.",
-            ["FailedToSendVerficationCode"] = "Failed to send verification code.",
+            ["FailedToSendVerificationCode"] = "Failed to send verification code.",
             ["NotAdminToFetchSessionErrorMessage"] = "User Not a Admin. Only Admin Users can fetch Session details.",
             ["NoUsersLoggedInErrorMessage"] = "No Users are currently Logged In.",
             ["AdminUserNotFoundErrorMessage"] = "Admin User does not exist.",
@@ -34,6 +33,8 @@
             ["UserNotLockedOutErrorMessage"] = "User is not locked out.",
             ["MissingApiKeyErrorMessage"] = "Api Key is Missing.",
             ["InvalidApiKeyErrorMessage"] = "Api Key is Invalid.",
+            ["TokenExpiredErrorMessage"] = "Token is Expired.",
+            ["InvalidTokenErrorMessage"] = "Token is Invalid.",
         };
 
         /// <summary>

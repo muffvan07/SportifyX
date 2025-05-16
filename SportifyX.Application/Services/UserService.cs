@@ -180,7 +180,7 @@ namespace SportifyX.Application.Services
         /// <returns></returns>
         public async Task<ApiResponse<LoginUserResponseModel>> LoginAsync(string email, string password)
         {
-            const int tokenExpiryHours = 1;
+            const int tokenExpiryMinutes = 5; // 5 minute expiry
 
             var user = await _userRepository.GetAsync(x => x.Email == email);
 
@@ -217,14 +217,14 @@ namespace SportifyX.Application.Services
             }
 
             // Generate JWT token
-            var token = _jwtTokenGenerator.GenerateToken(user, tokenExpiryHours);
+            var token = _jwtTokenGenerator.GenerateToken(user, tokenExpiryMinutes);
 
             // Create and add a new user session
             var userSession = new UserSession
             {
                 UserId = user.Id,
                 Token = token,
-                Expiration = DateTime.UtcNow.AddHours(tokenExpiryHours), // Example expiration time
+                Expiration = DateTime.UtcNow.AddMinutes(tokenExpiryMinutes),
                 IsValid = true,
                 CreationDate = DateTime.UtcNow,
                 CreatedBy = user.Username
@@ -236,7 +236,7 @@ namespace SportifyX.Application.Services
             var response = new LoginUserResponseModel
             {
                 Token = token,
-                UserId = user.Id, // Converting long to string
+                UserId = user.Id,
                 UserName = user.Username,
                 Email = user.Email,
                 TokenExpiryDate = userSession.Expiration
@@ -921,7 +921,7 @@ namespace SportifyX.Application.Services
                 return ApiResponse<bool>.Success(true);
             }
 
-            return ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("FailedToSendVerficationCode"));
+            return ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("FailedToSendVerificationCode"));
         }
 
         #endregion

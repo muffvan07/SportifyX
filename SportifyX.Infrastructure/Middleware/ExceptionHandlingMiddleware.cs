@@ -6,9 +6,13 @@ using Newtonsoft.Json.Linq;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Helpers;
+using System.Diagnostics;
 
 namespace SportifyX.Infrastructure.Middleware
 {
+    /// <summary>
+    /// Middleware for global exception handling and logging.
+    /// </summary>
     public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IServiceScopeFactory scopeFactory)
     {
         #region Variables
@@ -33,12 +37,21 @@ namespace SportifyX.Infrastructure.Middleware
         #region Public Methods
 
         /// <summary>
-        /// Invokes the specified context.
+        /// Invokes the middleware logic.
         /// </summary>
-        /// <param name="context">The context.</param>
+        /// <param name="context">The HTTP context.</param>
         public async Task Invoke(HttpContext context)
         {
-            string requestBody = await ReadRequestBodyAsync(context);
+            await ReadRequestBodyAsync(context);
+
+            var correlationId = context.Request.Headers.TryGetValue("X-Correlation-ID", out var corrId)
+                ? corrId.ToString()
+                : Guid.NewGuid().ToString();
+
+            context.Response.Headers["X-Correlation-ID"] = correlationId;
+
+            var requestStartTime = DateTime.UtcNow;
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -46,13 +59,16 @@ namespace SportifyX.Infrastructure.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unhandled exception occurred.");
+                stopwatch.Stop();
+                _logger.LogError(ex, "An unhandled exception occurred. CorrelationId: {CorrelationId}", correlationId);
 
                 using var scope = _scopeFactory.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<IExceptionHandlingService>();
 
+                // Log exception with additional context
                 await service.LogExceptionAsync(ex, context);
-                await HandleExceptionAsync(context);
+
+                await HandleExceptionAsync(context, ex, correlationId, requestStartTime, stopwatch.ElapsedMilliseconds);
             }
         }
 
@@ -61,42 +77,36 @@ namespace SportifyX.Infrastructure.Middleware
         #region Private Methods
 
         /// <summary>
-        /// Handles the exception asynchronous.
+        /// Handles the exception and writes a standardized error response.
         /// </summary>
-        /// <param name="context">The context.</param>
-        /// <returns></returns>
-        private static Task HandleExceptionAsync(HttpContext context)
+        private static Task HandleExceptionAsync(HttpContext context, Exception ex, string correlationId, DateTime requestStartTime, long executionTimeMs)
         {
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-            var response = ApiResponse<bool>.Fail(context.Response.StatusCode, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
-
+            var response = ApiResponse<object>.Fail(context.Response.StatusCode, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+            
             return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
         }
 
         /// <summary>
-        /// Reads the request body asynchronous.
+        /// Reads and optionally minifies the request body.
         /// </summary>
-        /// <param name="context">The context.</param>
-        /// <returns></returns>
         private static async Task<string> ReadRequestBodyAsync(HttpContext context)
         {
             try
             {
                 context.Request.EnableBuffering();
                 using var reader = new StreamReader(context.Request.Body, System.Text.Encoding.UTF8, leaveOpen: true);
-                string body = await reader.ReadToEndAsync();
+                var body = await reader.ReadToEndAsync();
                 context.Request.Body.Position = 0;
 
-                // Minify JSON if it's a valid JSON object
                 if (!string.IsNullOrWhiteSpace(body) && IsValidJson(body))
                 {
                     body = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(body), Formatting.None);
                 }
 
                 context.Items["RequestBody"] = body;
-
                 return body;
             }
             catch
@@ -106,12 +116,8 @@ namespace SportifyX.Infrastructure.Middleware
         }
 
         /// <summary>
-        /// Determines whether [is valid json] [the specified input].
+        /// Checks if a string is valid JSON.
         /// </summary>
-        /// <param name="input">The input.</param>
-        /// <returns>
-        ///   <c>true</c> if [is valid json] [the specified input]; otherwise, <c>false</c>.
-        /// </returns>
         private static bool IsValidJson(string input)
         {
             try

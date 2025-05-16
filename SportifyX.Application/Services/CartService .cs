@@ -42,8 +42,11 @@ namespace SportifyX.Application.Services
         public async Task<ApiResponse<bool>> UpdateCartItemAsync(long id, int quantity)
         {
             var cartItem = await _cartRepository.GetByIdAsync(id);
+
             if (cartItem == null)
+            {
                 return ApiResponse<bool>.Fail(404, "Cart item not found.");
+            }
 
             cartItem.Quantity = quantity;
             await _cartRepository.UpdateAsync(cartItem);
@@ -58,10 +61,19 @@ namespace SportifyX.Application.Services
         /// <returns></returns>
         public async Task<ApiResponse<bool>> RemoveItemFromCartAsync(long id)
         {
+            var cartItem = await _cartRepository.GetByIdAsync(id);
+            if (cartItem == null)
+                return ApiResponse<bool>.Fail(404, "Cart item not found.");
+
             await _cartRepository.DeleteAsync(x => x.Id == id);
             return ApiResponse<bool>.Success(true);
         }
 
+        /// <summary>
+        /// Gets all cart items for a user.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <returns></returns>
         public async Task<ApiResponse<List<CartItems>>> GetCartItemsByUserIdAsync(long userId)
         {
             var cartItems = await _cartRepository.GetAllAsync(ci => ci.UserId == userId);

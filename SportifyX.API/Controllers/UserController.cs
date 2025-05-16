@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
@@ -11,6 +12,7 @@ namespace SportifyX.API.Controllers
     /// UserController
     /// </summary>
     /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class UserController(IUserService authService, IExceptionHandlingService exceptionHandlingService) : ControllerBase
@@ -46,14 +48,7 @@ namespace SportifyX.API.Controllers
                 // Call the service to register the user
                 var response = await _userService.RegisterUserAsync(registrationDto);
 
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    // Return success response with detailed information from service
-                    return Ok(response);
-                }
-
-                // Return the appropriate failure response with status code and error details
-                return StatusCode(response.StatusCode, response);
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {
@@ -110,12 +105,7 @@ namespace SportifyX.API.Controllers
             {
                 var response = await _userService.LogoutAsync(dto.UserId, dto.Token);
 
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {
