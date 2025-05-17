@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SportifyX.Application.Filters;
 using SportifyX.Application.Services;
 using SportifyX.Application.Services.Common;
 using SportifyX.Application.Services.Common.Interface;
@@ -15,6 +16,7 @@ using SportifyX.Infrastructure.Middleware;
 using SportifyX.Infrastructure.Repositories;
 using SportifyX.Infrastructure.Security;
 using SportifyX.Infrastructure.Services;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,6 +92,8 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "SportifyX", Version = "v1" });
 
+    c.DocumentFilter<CustomTagOrderDocumentFilter>();
+
     // Define the API key security scheme
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
@@ -114,6 +118,13 @@ builder.Services.AddSwaggerGen(c =>
             []
         }
     });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+
+    c.IncludeXmlComments(xmlPath);
+
+    c.OperationFilter<AddRequiredHeaderParameter>();
 });
 
 // 7. Dependency injection for services/repositories

@@ -1,27 +1,58 @@
-﻿using SportifyX.Application.DTOs.User;
-using SportifyX.Application.ResponseModels.Common;
+﻿using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.ResponseModels.User;
 
 namespace SportifyX.Application.Services.Interface
 {
+    /// <summary>
+    /// IUserService
+    /// </summary>
     public interface IUserService
     {
-        Task<ApiResponse<RegisterUserResponseModel>> RegisterUserAsync(UserRegistrationDto userRegistrationDto);
-        Task<ApiResponse<LoginUserResponseModel>> LoginAsync(string email, string password);  // Return JWT token on success
-        Task<ApiResponse<bool>> LogoutAsync(long userId, string token);
-        Task<ApiResponse<PasswordResetTokenResponseModel>> GeneratePasswordResetTokenAsync(string email);
-        Task<ApiResponse<bool>> ResetPasswordAsync(string email, string token, string newPassword);
-        Task<ApiResponse<bool>> ChangePasswordAsync(string email, string currentPassword, string newPassword);
-        Task<ApiResponse<AddRoleResponseModel>> AddRoleToUserAsync(long userId, long roleId, long currentUserId);
-        Task<ApiResponse<bool>> RemoveRoleFromUserAsync(long userId, long roleId, long currentUserId);
-        Task<ApiResponse<UserRoleResponseModel>> GetUserRolesAsync(long userId);
-        Task<ApiResponse<bool>> InitiateEmailVerificationAsync(long userId);
-        Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(long userId, string email, string token);
-        Task<ApiResponse<bool>> SendMobileVerificationCodeAsync(long userId, string countryCode, string mobileNumber);
-        Task<ApiResponse<bool>> ConfirmMobileVerificationCodeAsync(long userId, string countryCode, string mobileNumber, string verificationCode);
-        Task<ApiResponse<bool>> EnableTwoFactorAsync(long userId);
-        Task<ApiResponse<List<LoggedInUsersResponseModel>>> GetLoggedInUsersAsync(long adminUserId);
+        /// <summary>
+        /// Gets all registered users asynchronous.
+        /// </summary>
+        /// <param name="adminUserId">The admin user identifier.</param>
+        /// <returns></returns>
         Task<ApiResponse<List<RegisteredUserResponseModel>>> GetAllRegisteredUsersAsync(long adminUserId);
+
+        /// <summary>
+        /// Gets the logged-in users asynchronous.
+        /// </summary>
+        /// <param name="adminUserId">The admin user identifier.</param>
+        /// <returns></returns>
+        Task<ApiResponse<List<LoggedInUsersResponseModel>>> GetLoggedInUsersAsync(long adminUserId);
+
+        /// <summary>
+        /// Unlocks the user asynchronous.
+        /// </summary>
+        /// <param name="email">The email.</param>
+        /// <param name="adminUserId">The admin user identifier.</param>
+        /// <returns></returns>
         Task<ApiResponse<bool>> UnlockUserAsync(string email, long adminUserId);
+
+        /// <summary>
+        /// Adds the role to user asynchronous.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="roleId">The role identifier.</param>
+        /// <param name="currentUserId">The current user identifier.</param>
+        /// <returns></returns>
+        Task<ApiResponse<AddRoleResponseModel>> AddRoleToUserAsync(long userId, long roleId, long currentUserId);
+
+        /// <summary>
+        /// Gets the user roles asynchronous.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <returns></returns>
+        Task<ApiResponse<UserRoleResponseModel>> GetUserRolesAsync(long userId);
+        
+        /// <summary>
+        /// Removes the role from user asynchronous.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="roleId">The role identifier.</param>
+        /// <param name="currentUserId">The current user identifier.</param>
+        /// <returns></returns>
+        Task<ApiResponse<bool>> RemoveRoleFromUserAsync(long userId, long roleId, long currentUserId);
     }
 }

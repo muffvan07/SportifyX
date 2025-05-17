@@ -1,22 +1,20 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
-using SportifyX.Application.ResponseModels.User;
+using SportifyX.Application.Services;
 using SportifyX.Application.Services.Interface;
 using SportifyX.Domain.Helpers;
 
 namespace SportifyX.API.Controllers
 {
     /// <summary>
-    /// UserController
+    /// SecurityController
     /// </summary>
     /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
-    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class UserController(
-        IUserService authService, 
+    public class SecurityController(
+        ISecurityService securityService, 
         IExceptionHandlingService exceptionHandlingService) : ControllerBase
     {
         #region Variables
@@ -24,7 +22,7 @@ namespace SportifyX.API.Controllers
         /// <summary>
         /// The user service
         /// </summary>
-        private readonly IUserService _userService = authService;
+        private readonly ISecurityService _securityService = securityService;
 
         /// <summary>
         /// The exception handling service
@@ -33,60 +31,127 @@ namespace SportifyX.API.Controllers
 
         #endregion
 
-        #region Methods
+        #region Public Methods
 
-        #region All Users
+        #region Change User Password
 
         /// <summary>
-        /// Gets the list of all registered users. Admin access only.
+        /// Changes the password.
         /// </summary>
-        /// <param name="adminUserId">The admin user identifier.</param>
+        /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAllRegisteredUsers([FromQuery] long adminUserId)
+        [HttpPost("password/change")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
             try
             {
-                var response = await _userService.GetAllRegisteredUsersAsync(adminUserId);
+                var response = await _securityService.ChangePasswordAsync(dto.Email, dto.CurrentPassword, dto.NewPassword);
 
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
+        #region Request Password Reset Token
+
+        /// <summary>
+        /// Requests the password reset.
+        /// </summary>
+        /// <param name="dto">The dto.</param>
+        /// <returns></returns>
+        [HttpPost("password/request-recovery")]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordRecoveryRequestDto dto)
+        {
+            try
+            {
+                var response = await _securityService.GeneratePasswordResetTokenAsync(dto.Email);
+
+                // Send token via email (or other means)
+
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
+        #region Reset User Passoword
+
+        /// <summary>
+        /// Resets the password.
+        /// </summary>
+        /// <param name="dto">The dto.</param>
+        /// <returns></returns>
+        [HttpPost("password/reset")]
+        public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto dto)
+        {
+            try
+            {
+                var response = await _securityService.ResetPasswordAsync(dto.Email, dto.Token, dto.NewPassword);
+
+                if (response.StatusCode == StatusCodes.Status200OK)
+                {
+                    return Ok(response);
+                }
+
+                return StatusCode(response.StatusCode, response);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
+
+                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
+                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
+            }
+        }
+
+        #endregion
+
+        #region Enable 2-Factor Authentication
+
+        /// <summary>
+        /// Enables the two-factor authentication.
+        /// </summary>
+        /// <param name="dto">The dto.</param>
+        /// <returns></returns>
+        [HttpPost("enable-2fa")]
+        public async Task<IActionResult> EnableTwoFactorAuthentication([FromBody] TwoFactorAuthDto dto)
+        {
+            try
+            {
+                var response = await _securityService.EnableTwoFactorAsync(dto.UserId);
                 return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {
                 await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-                var errorResponse = ApiResponse<List<RegisteredUserResponseModel>>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
-                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
-            }
-        }
-
-        #endregion
-
-        #region Get Logged in Users
-
-        /// <summary>
-        /// Gets the logged-in users.
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("active-sessions")]
-        public async Task<IActionResult> GetLoggedInUsers(long adminUserId)
-        {
-            try
-            {
-                var response = await _userService.GetLoggedInUsersAsync(adminUserId);
-
-                // Return based on response status
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-
                 var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
                 return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
             }
@@ -94,131 +159,24 @@ namespace SportifyX.API.Controllers
 
         #endregion
 
-        #region Unlock User
+        #region Disable 2-Factor Authentication
 
         /// <summary>
-        /// Unlocks the user.
-        /// </summary>
-        /// <param name="unlockUserDto">The unlock user dto.</param>
-        /// <returns></returns>
-        [HttpPost("unlock")]
-        public async Task<IActionResult> UnlockUser([FromBody] UnlockUserDto unlockUserDto)
-        {
-            try
-            {
-                var response = await _userService.UnlockUserAsync(unlockUserDto.Email, unlockUserDto.AdminUserId);
-
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-
-                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
-                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
-            }
-        }
-
-        #endregion
-
-        #region Add User Role
-
-        /// <summary>
-        /// Adds the user role.
+        /// Disables the two-factor authentication.
         /// </summary>
         /// <param name="dto">The dto.</param>
         /// <returns></returns>
-        [HttpPost("roles/add")]
-        public async Task<IActionResult> AddUserRole([FromBody] AddRoleDto dto)
+        [HttpPost("disable-2fa")]
+        public async Task<IActionResult> DisableTwoFactorAuthentication([FromBody] DisableTwoFactorDto dto)
         {
             try
             {
-                var response = await _userService.AddRoleToUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
-
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
+                var response = await _securityService.DisableTwoFactorAsync(dto.UserId, dto.Password);
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {
-                // Log the exception
                 await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-
-                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
-                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
-            }
-        }
-
-        #endregion
-
-        #region Get User Roles
-
-        /// <summary>
-        /// Gets the user roles.
-        /// </summary>
-        /// <param name="userId">The user identifier.</param>
-        /// <returns></returns>
-        [HttpGet("roles")]
-        public async Task<IActionResult> GetUserRoles(long userId)
-        {
-            try
-            {
-                var response = await _userService.GetUserRolesAsync(userId);
-
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-
-                var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
-                return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
-            }
-        }
-
-        #endregion
-
-        #region Remove User Role
-
-        /// <summary>
-        /// Removes the user role.
-        /// </summary>
-        /// <param name="dto">The dto.</param>
-        /// <returns></returns>
-        [HttpPost("roles/remove")]
-        public async Task<IActionResult> RemoveUserRole([FromBody] RemoveRoleDto dto)
-        {
-            try
-            {
-                var response = await _userService.RemoveRoleFromUserAsync(dto.UserId, dto.RoleId, dto.CurrentUserId);
-
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                await _exceptionHandlingService.LogExceptionAsync(ex, HttpContext);
-
                 var errorResponse = ApiResponse<bool>.Fail(StatusCodes.Status500InternalServerError, ErrorMessageHelper.GetErrorMessage("GeneralErrorMessage"));
                 return StatusCode(StatusCodes.Status500InternalServerError, errorResponse);
             }
