@@ -133,10 +133,13 @@ builder.Services.AddSingleton<LogQueue>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISecurityService, SecurityService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IBrevoEmailService, BrevoEmailService>();
 builder.Services.AddTransient<ISmsSenderService, SmsSenderService>();
+builder.Services.AddTransient<ICommonService, CommonService>();
 builder.Services.AddScoped<IExceptionHandlingService, ExceptionHandlingService>();
 
 // 8. HTTP client/accessor

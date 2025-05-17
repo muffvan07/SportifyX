@@ -1,29 +1,46 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Configuration;
 using SportifyX.Application.Services.Common.Interface;
+using System.Text;
+using System.Text.Json;
 
 namespace SportifyX.Application.Services.Common
 {
-    public class SmsSenderService : ISmsSenderService
+    public class SmsSenderService(IConfiguration configuration) : ISmsSenderService
     {
+        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly string? _fast2SmsApiKey = configuration["SmsSettings:Fast2SmsApiKey"];
+
         public async Task<bool> SendSmsAsync(string mobileNumber, string message)
         {
-            // Placeholder for SMS provider logic
-            // Example: Implement using Twilio or any preferred SMS API here
-
             try
             {
-                // Simulate SMS sending logic (e.g., using HttpClient to make requests)
+                var payload = new
+                {
+                    route = "q",
+                    message = message,
+                    language = "english",
+                    numbers = mobileNumber
+                };
 
-                Console.WriteLine($"Sending SMS to {mobileNumber}: {message}");
+                var request = new HttpRequestMessage(HttpMethod.Post, "https://www.fast2sms.com/dev/bulkV2")
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+                };
+                request.Headers.Add("authorization", _fast2SmsApiKey);
 
-                // Assume the SMS is sent successfully for this example
-
-                return await Task.FromResult(true);
+                var response = await _httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
             }
             catch (Exception)
             {
                 return false;
             }
+        }
+
+        private static string GenerateVerificationCode()
+        {
+            var random = new Random();
+            return random.Next(100000, 999999).ToString();
         }
     }
 }

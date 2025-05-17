@@ -42,11 +42,9 @@ namespace SportifyX.Application.Services.Interface
         /// <summary>
         /// Confirms the email verification asynchronous.
         /// </summary>
-        /// <param name="userId">The user identifier.</param>
-        /// <param name="email">The email.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(long userId, string email, string token);
+        Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(string token);
 
         /// <summary>
         /// Sends the mobile verification code asynchronous.

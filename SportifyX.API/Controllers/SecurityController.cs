@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.Services;
@@ -11,6 +12,7 @@ namespace SportifyX.API.Controllers
     /// SecurityController
     /// </summary>
     /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class SecurityController(

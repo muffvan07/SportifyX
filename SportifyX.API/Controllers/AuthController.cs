@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SportifyX.Application.DTOs.User;
 using SportifyX.Application.ResponseModels.Common;
 using SportifyX.Application.Services.Interface;
@@ -10,8 +11,9 @@ namespace SportifyX.API.Controllers
     /// AuthController
     /// </summary>
     /// <seealso cref="Microsoft.AspNetCore.Mvc.ControllerBase" />
+    [AllowAnonymous]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Auth")]
     public class AuthController(
         IAuthService authService, 
         IExceptionHandlingService exceptionHandlingService) : ControllerBase
@@ -156,21 +158,16 @@ namespace SportifyX.API.Controllers
         /// <summary>
         /// Confirms the email verification.
         /// </summary>
-        /// <param name="request">The request.</param>
+        /// <param name="token">The token.</param>
         /// <returns></returns>
         [HttpPost("verify-email/confirm")]
-        public async Task<IActionResult> ConfirmEmailVerification([FromBody] ConfirmEmailVerificationDto request)
+        public async Task<IActionResult> ConfirmEmailVerification(string token)
         {
             try
             {
-                var response = await _authService.ConfirmEmailVerificationAsync(request.UserId, request.Email, request.Token);
+                var response = await _authService.ConfirmEmailVerificationAsync(token);
 
-                if (response.StatusCode == StatusCodes.Status200OK)
-                {
-                    return Ok(response);
-                }
-
-                return StatusCode(response.StatusCode, response);
+                return response.StatusCode == StatusCodes.Status200OK ? Ok(response) : StatusCode(response.StatusCode, response);
             }
             catch (Exception ex)
             {

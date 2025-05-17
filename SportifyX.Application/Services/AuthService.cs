@@ -302,11 +302,12 @@ namespace SportifyX.Application.Services
             await _verificationRepository.AddAsync(verification);
 
             // Send verification email
-            var verificationUrl = $"https://yourapp.com/verify-email?token={token}";
-            var subject = "Email Verification";
+            var verificationUrl = $"https://localhost:44356/api/auth/verify-email/confirm?token={token}";
+            const string subject = "Email Verification";
             var body = $"Please verify your email by clicking on this link: {verificationUrl}";
 
-            var toEmailAndName = new Dictionary<string, string> { { user.FirstName, user.Email } };
+            //var toEmailAndName = new Dictionary<string, string> { { user.FirstName, user.Email } };
+            var toEmailAndName = new Dictionary<string, string> { { user.FirstName, "vanwalamufaddal@gmail.com" } };
             var ccEmailAndName = new Dictionary<string, string> { { _emailSettingsApi.FromName, _emailSettingsApi.FromEmail } };
 
             // Send the email
@@ -327,25 +328,23 @@ namespace SportifyX.Application.Services
         /// <summary>
         /// Confirms the email verification asynchronous.
         /// </summary>
-        /// <param name="userId">The user identifier.</param>
-        /// <param name="email">The email.</param>
         /// <param name="token">The token.</param>
         /// <returns></returns>
-        public async Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(long userId, string email, string token)
+        public async Task<ApiResponse<bool>> ConfirmEmailVerificationAsync(string token)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-
-            if (user == null)
-            {
-                return ApiResponse<bool>.Fail(StatusCodes.Status404NotFound, ErrorMessageHelper.GetErrorMessage("UserNotFoundErrorMessage"));
-            }
-
             // Retrieve verification record
-            var verification = await _verificationRepository.GetAsync(v => v.UserId == userId && v.Email == email && v.Token == token && v.VerificationType == VerificationTypeEnum.Email.GetHashCode() && !v.IsUsed);
+            var verification = await _verificationRepository.GetAsync(v => v.Token == token && v.VerificationType == VerificationTypeEnum.Email.GetHashCode() && !v.IsUsed);
 
             if (verification == null || verification.ExpirationDate < DateTime.UtcNow)
             {
                 return ApiResponse<bool>.Fail(StatusCodes.Status404NotFound, ErrorMessageHelper.GetErrorMessage("InvalidTokenErrorMessage"));
+            }
+
+            var user = await _userRepository.GetByIdAsync(verification.UserId);
+
+            if (user == null)
+            {
+                return ApiResponse<bool>.Fail(StatusCodes.Status404NotFound, ErrorMessageHelper.GetErrorMessage("UserNotFoundErrorMessage"));
             }
 
             // Update verification record
